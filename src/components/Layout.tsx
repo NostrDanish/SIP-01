@@ -25,7 +25,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-md">
         <div className="container flex h-16 items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-3 group shrink-0">
-            <img src="/icon.png" alt="SIP-01 logo" className="size-9 rounded-md ring-1 ring-border" />
+            <img src="/icon.webp" alt="SIP-01 logo" className="size-9 rounded-md ring-1 ring-border" />
             <div className="leading-tight">
               <div className="font-mono font-bold text-sm tracking-tight group-hover:text-primary transition-colors">
                 SIP-01
@@ -121,7 +121,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="container py-10 grid gap-8 md:grid-cols-3">
           <div>
             <div className="flex items-center gap-2.5 mb-3">
-              <img src="/icon.png" alt="" className="size-7 rounded ring-1 ring-border" />
+              <img src="/icon.webp" alt="" className="size-7 rounded ring-1 ring-border" />
               <span className="font-mono font-bold text-sm">SIP-01</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
