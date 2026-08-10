@@ -2,6 +2,12 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
 
 import Index from "./pages/Index";
+import SpecPage from "./pages/SpecPage";
+import RegistryPage from "./pages/RegistryPage";
+import QueryPage from "./pages/QueryPage";
+import ExplorerPage from "./pages/ExplorerPage";
+import AuditPage from "./pages/AuditPage";
+import ImplementationsPage from "./pages/ImplementationsPage";
 import { NIP19Page } from "./pages/NIP19Page";
 import NotFound from "./pages/NotFound";
 
@@ -11,6 +17,12 @@ export function AppRouter() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/spec" element={<SpecPage />} />
+        <Route path="/registry" element={<RegistryPage />} />
+        <Route path="/query" element={<QueryPage />} />
+        <Route path="/explorer" element={<ExplorerPage />} />
+        <Route path="/audit" element={<AuditPage />} />
+        <Route path="/implementations" element={<ImplementationsPage />} />
         {/* NIP-19 route for npub1, note1, naddr1, nevent1, nprofile1 */}
         <Route path="/:nip19" element={<NIP19Page />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

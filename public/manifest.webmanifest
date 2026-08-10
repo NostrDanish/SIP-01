@@ -1,0 +1,16 @@
+{
+  "name": "SIP-01 — Search Index Protocol",
+  "short_name": "SIP-01",
+  "description": "The decentralized web search index protocol on Nostr. One shared index, many independent indexers, many search engines. Kind 39697.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0a09",
+  "theme_color": "#0c0a09",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
