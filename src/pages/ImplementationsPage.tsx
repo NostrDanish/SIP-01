@@ -1,7 +1,7 @@
 import { ExternalLink, FileCode2, GitFork } from 'lucide-react';
 
 import { Layout } from '@/components/Layout';
-import { Callout, DocSection, Pill } from '@/components/doc';
+import { C, Callout, DocSection, Pill } from '@/components/doc';
 import { REPOS } from '@/lib/sip01';
 import { useSeoMeta } from '@/lib/seo';
 

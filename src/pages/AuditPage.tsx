@@ -1,7 +1,7 @@
 import { AlertTriangle, Bug, CheckCircle2, Info } from 'lucide-react';
 
 import { Layout } from '@/components/Layout';
-import { Callout, CodeBlock, DocSection, Pill } from '@/components/doc';
+import { C, Callout, CodeBlock, DocSection, Pill } from '@/components/doc';
 import { AUDIT_FINDINGS, AUDIT_VERIFIED, REPOS } from '@/lib/sip01';
 import { useSeoMeta } from '@/lib/seo';
 import { cn } from '@/lib/utils';
