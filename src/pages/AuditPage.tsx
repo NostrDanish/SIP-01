@@ -54,7 +54,10 @@ export default function AuditPage() {
 
         <div className="space-y-14">
           <DocSection id="method" number="1" title="Method">
-            <p>Five repositories were cloned and read end-to-end:</p>
+            <p>
+              Five repositories were cloned and read end-to-end for the v1 → v1.1 audit (a sixth, indexstr, was
+              reviewed for the heartbeat/index-stats schema consumed by the dashboard):
+            </p>
             <ul className="list-disc pl-6 space-y-1.5">
               {REPOS.map((r) => (
                 <li key={r.name}>

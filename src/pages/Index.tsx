@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import {
+  Activity,
   ArrowRight,
   BookOpen,
   Bot,
@@ -121,6 +122,13 @@ export default function Index() {
               <Globe className="size-4" />
               Explore the live index
             </Link>
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3 text-sm font-semibold hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Activity className="size-4" />
+              Index dashboard
+            </Link>
           </div>
         </div>
       </section>
@@ -214,7 +222,7 @@ export default function Index() {
           <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
             <div>
               <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-primary mb-3">Running in production</h2>
-              <p className="text-2xl md:text-3xl font-bold tracking-tight">Five codebases, one contract</p>
+              <p className="text-2xl md:text-3xl font-bold tracking-tight">Six codebases, one contract</p>
             </div>
             <Link to="/implementations" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
               All implementations <ArrowRight className="size-4" />

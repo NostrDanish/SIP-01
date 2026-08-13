@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
 
 import Index from "./pages/Index";
+import DashboardPage from "./pages/DashboardPage";
 import SpecPage from "./pages/SpecPage";
 import RegistryPage from "./pages/RegistryPage";
 import QueryPage from "./pages/QueryPage";
@@ -17,6 +18,7 @@ export function AppRouter() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/spec" element={<SpecPage />} />
         <Route path="/registry" element={<RegistryPage />} />
         <Route path="/query" element={<QueryPage />} />

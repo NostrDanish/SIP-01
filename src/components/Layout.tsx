@@ -8,6 +8,7 @@ import { SIP01 } from '@/lib/sip01';
 import { Button } from '@/components/ui/button';
 
 const NAV = [
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/spec', label: 'Specification' },
   { to: '/registry', label: 'Tag Registry' },
   { to: '/query', label: 'Query Reference' },

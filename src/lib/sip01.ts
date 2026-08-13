@@ -55,6 +55,19 @@ export const REPOS: Repo[] = [
     ],
   },
   {
+    name: 'indexstr',
+    url: 'https://github.com/NostrDanish/indexstr',
+    role: 'Distributed indexing network',
+    badge: 'Crawler',
+    description:
+      'Crawlstr evolved into a network: curated URL collections, deterministic sharding (256 shards, one home shard per node pubkey), offline outbox, and node heartbeats (kind 16919) so the network can measure itself without a coordinator.',
+    keyFiles: [
+      { path: 'src/crawler/webIndex.ts', note: 'Byte-compatible event builder' },
+      { path: 'src/crawler/heartbeat.ts', note: 'Node heartbeats — kind 16919' },
+      { path: 'src/crawler/sharding.ts', note: 'Coordinator-free work splitting' },
+    ],
+  },
+  {
     name: 'UNCAGED-ENGINE',
     url: 'https://github.com/NostrDanish/UNCAGED-ENGINE',
     role: 'Search engine template',

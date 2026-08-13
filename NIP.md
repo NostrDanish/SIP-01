@@ -7,6 +7,10 @@ event kind:
 | Schema | Kind | Type | Defined in |
 |--------|------|------|------------|
 | Web Index Observation (SIP-01) | **39697** | addressable | [`public/spec/SIP-01.md`](public/spec/SIP-01.md) |
+| Crawler node heartbeat (indexstr) | **16919** | replaceable | read-only consumer — schema: [indexstr `src/crawler/heartbeat.ts`](https://github.com/NostrDanish/indexstr/blob/main/src/crawler/heartbeat.ts) |
+
+This site reads both kinds for the public `/dashboard` (index statistics +
+crawler network health). It publishes neither.
 
 ## Summary
 

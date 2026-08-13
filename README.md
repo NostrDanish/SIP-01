@@ -67,6 +67,7 @@ Every hash in this README is real and reproducible — see
 | **[`public/spec/SIP-01.md`](public/spec/SIP-01.md)** | The full, submission-ready specification (v1.1) |
 | **[`docs/IMPLEMENTATION-GUIDE.md`](docs/IMPLEMENTATION-GUIDE.md)** | Integration guide: publish, consume, or relay the index |
 | **[`NIP.md`](NIP.md)** | Schema summary (repo convention) |
+| Site `/dashboard` | Live public index stats — observations, documents, indexers, crawler heartbeats |
 | Site `/registry` | Core + extension tag registry and the extension process |
 | Site `/query` | Query reference: NIP-01 filters, NIP-50 operators, NIP-11, NIP-77 |
 | Site `/audit` | Cross-implementation fact-check & bug report (v1 → v1.1) |
@@ -129,6 +130,7 @@ Full walkthroughs: [`docs/IMPLEMENTATION-GUIDE.md`](docs/IMPLEMENTATION-GUIDE.md
 |---|---|
 | [UNCAGED-Index-Relay](https://github.com/NostrDanish/UNCAGED-Index-Relay) | Validating index relay — NIP-50 operators, NIP-11 capabilities, NIP-77 federation |
 | [Crwalstr](https://github.com/NostrDanish/Crwalstr) | Browser web crawler — pure SIP-01 publisher, per-device indexer keys |
+| [indexstr](https://github.com/NostrDanish/indexstr) | Distributed indexing network — sharded crawling + node heartbeats (kind 16919) |
 | [UNCAGED-ENGINE](https://github.com/NostrDanish/UNCAGED-ENGINE) | Reference search-engine implementation / forkable template |
 | [0xSearchstr](https://github.com/NostrDanish/0xSearchstr) | Search engine — auto-indexes results via autosigner |
 | [0xPresearchstr](https://github.com/NostrDanish/0xPresearchstr) | Search engine — clearnet + tor/i2p crawling, keyword stakes |
