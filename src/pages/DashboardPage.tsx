@@ -29,8 +29,8 @@ import { C, Callout, Pill } from '@/components/doc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useIndexStats, type IndexerStat } from '@/hooks/useIndexStats';
-import { SEARCH_RELAYS } from '@/lib/sip01';
+import { useIndexStats, type IndexerStat, type RelayCoverage } from '@/hooks/useIndexStats';
+import { OBSERVATION_RELAYS } from '@/lib/sip01';
 import { HEARTBEAT_TTL_S, SHARD_COUNT } from '@/lib/heartbeat';
 import { useSeoMeta } from '@/lib/seo';
 import { cn } from '@/lib/utils';
@@ -143,12 +143,82 @@ function IndexerRow({ stat, rank }: { stat: IndexerStat; rank: number }) {
   );
 }
 
+function relayHost(url: string): string {
+  return url.replace(/^wss?:\/\//, '').replace(/\/$/, '');
+}
+
+const COVERAGE_DOT: Record<RelayCoverage['status'], string> = {
+  ok: 'bg-emerald-500',
+  partial: 'bg-amber-500',
+  failed: 'bg-red-500/70',
+};
+
+function RelayCoverageCard({ coverage, loading }: { coverage: RelayCoverage[]; loading?: boolean }) {
+  const reporting = coverage.filter((r) => r.status !== 'failed' && (r.observations > 0 || r.heartbeats > 0));
+  return (
+    <Card className="mb-8">
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted-foreground">
+            Relay coverage — where this window came from
+          </CardTitle>
+          {!loading && coverage.length > 0 && (
+            <Pill tone="opt">{reporting.length} of {coverage.length} sources hold data</Pill>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              {coverage.map((r) => (
+                <div
+                  key={r.url}
+                  className="flex items-center gap-2.5 rounded-lg border border-border/70 px-3.5 py-2.5"
+                >
+                  <span
+                    className={cn('size-2 rounded-full shrink-0', COVERAGE_DOT[r.status])}
+                    title={r.status === 'ok' ? 'answered' : r.status === 'partial' ? 'answered, hit read timeout' : 'unreachable'}
+                  />
+                  <span className="font-mono text-xs truncate min-w-0 flex-1" title={r.isPool ? undefined : r.url}>
+                    {r.isPool ? r.url : relayHost(r.url)}
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                    {r.status === 'failed' ? (
+                      'unreachable'
+                    ) : (
+                      <>
+                        <span className="text-foreground/85">{r.observations.toLocaleString()}</span> obs
+                        {r.heartbeats > 0 && <> · <span className="text-foreground/85">{r.heartbeats}</span> hb</>}
+                      </>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
+              <strong className="text-foreground">Any relay can host kind 39697.</strong> The UNCAGED index relay
+              is just a relay with extra SIP-01 validation and NIP-50 search operators — the data is not tied to
+              it. This page reads the union of the known crawler publish pools (Crawlstr + indexstr), the NIP-50
+              search relays, and your own configured relays. Counts are per-relay, before cross-relay dedup.
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 
 export default function DashboardPage() {
   useSeoMeta({
     title: 'SIP-01 Index Dashboard — live stats from the shared search index',
-    description: 'Public, coordinator-free statistics for the SIP-01 index: observations, documents, indexers, topics, and live crawler-node heartbeats. Any SIP-01 publisher lands here by default.',
+    description: 'Public, coordinator-free statistics for the SIP-01 index: observations, documents, indexers, topics, per-relay coverage, and live indexstr crawler-node heartbeats. Any SIP-01 publisher on any relay lands here by default.',
   });
 
   const { data, isLoading, isFetching, refetch } = useIndexStats();
@@ -170,8 +240,9 @@ export default function DashboardPage() {
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Index Dashboard</h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl">
               Public statistics for the shared SIP-01 index, computed entirely from relay data in your browser.
-              No indexer registry, no coordinator — <strong className="text-foreground">any crawler that publishes
-              SIP-01 lands here by default</strong>: Crwalstr, indexstr, or anything new.
+              No indexer registry, no coordinator — <strong className="text-foreground">anyone publishing kind
+              39697 to any relay lands here by default</strong>: Crwalstr, indexstr, autosigners, or anything
+              new. We read every relay the crawlers publish to, plus yours.
             </p>
           </div>
           <Button variant="outline" onClick={() => refetch()} disabled={isFetching} className="gap-2 shrink-0">
@@ -206,12 +277,15 @@ export default function DashboardPage() {
           <Card className="border-dashed mb-8">
             <CardContent className="py-12 px-8 text-center">
               <p className="text-muted-foreground max-w-md mx-auto">
-                No SIP-01 activity found on the queried relays right now. The index grows as crawlers run — start
+                No SIP-01 activity found on any queried relay right now. The index grows as crawlers run — start
                 one and it will show up here automatically.
               </p>
             </CardContent>
           </Card>
         )}
+
+        {/* Per-relay provenance */}
+        <RelayCoverageCard coverage={data?.relayCoverage ?? []} loading={isLoading} />
 
         {/* Activity chart */}
         <Card className="mb-8">
@@ -266,7 +340,7 @@ export default function DashboardPage() {
             <>
               <BarsCard title="Top topics (t tags)" data={data?.topics ?? []} />
               <BarsCard title="Top hosts" data={data?.topHosts ?? []} />
-              <BarsCard title="Crawler software (source)" data={data?.sources ?? []} />
+              <BarsCard title="Indexer software (source tag)" data={data?.sources ?? []} />
               <BarsCard title="Languages (l tag)" data={data?.languages ?? []} />
             </>
           )}
@@ -277,17 +351,19 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted-foreground">
-                Crawler network — node heartbeats
+                Crawler network — indexstr node heartbeats
               </CardTitle>
-              <Pill tone="opt">kind 16919 · replaceable · self-reported</Pill>
+              <Pill tone="opt">kind 16919 · indexstr nodes · self-reported</Pill>
             </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-32 w-full" />
             ) : (data?.heartbeats.length ?? 0) === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">
-                No crawler heartbeats in range. Nodes publish one every 10 minutes while crawling.
+              <p className="text-sm text-muted-foreground py-6 text-center max-w-xl mx-auto">
+                No indexstr heartbeats in range right now. Nodes publish one every 10 minutes while crawling.
+                SIP-01 publishers that don't run indexstr never appear in this panel — their signed kind 39697
+                observations land in the indexer leaderboard below instead.
               </p>
             ) : (
               <>
@@ -356,7 +432,7 @@ export default function DashboardPage() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Database className="size-4 text-primary" /> Indexer leaderboard — derived from observations
+              <Database className="size-4 text-primary" /> Indexer leaderboard — every kind 39697 publisher, any relay
             </CardTitle>
           </CardHeader>
           <CardContent className="px-0 pb-2">
@@ -397,15 +473,18 @@ export default function DashboardPage() {
         </Card>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Callout kind="info" title="Your crawler lands here automatically">
-            There is no indexer registry to join. Publish valid kind 39697 events — optionally with a{' '}
-            <C>source</C> tag like <C>mycrawler/1</C> — and the next dashboard window includes you. Heartbeat
-            support (kind 16919, see the indexstr schema) adds your node to the network panel.
+          <Callout kind="info" title="Two layers, two kinds">
+            <strong className="text-foreground">Kind 39697 observations are the index</strong> — anyone who
+            publishes them is an indexer and lands on the leaderboard automatically; optionally add a{' '}
+            <C>source</C> tag like <C>mycrawler/1</C>.{' '}
+            <strong className="text-foreground">Kind 16919 heartbeats are the indexstr crawler network's
+            health layer</strong> — self-reported coverage from nodes running the indexstr sharding scheme.
+            Crawlstr, autosigners, and engines publish observations only.
           </Callout>
           <Callout kind="info" title="Where the numbers come from">
-            Computed live from up to {500 * 4} recent observations across{' '}
-            {SEARCH_RELAYS.map((r) => r.replace('wss://', '').replace(/\/$/, '')).join(', ')} plus your configured
-            relays. Auto-refreshes every 60s. Browse individual observations in the{' '}
+            Read live in your browser from {OBSERVATION_RELAYS.length} relays — the union of the Crawlstr and
+            indexstr publish pools and the NIP-50 search relays — plus your configured relays. See the coverage
+            panel above for per-relay detail. Auto-refreshes every 60s. Browse individual observations in the{' '}
             <Link to="/explorer" className="text-primary hover:underline">explorer</Link>.
           </Callout>
         </div>
@@ -421,8 +500,8 @@ export default function DashboardPage() {
         <div className="mt-10 flex items-center gap-2 text-xs text-muted-foreground font-mono">
           <Tags className="size-3.5" />
           <span>
-            spec: <Link to="/spec" className="text-primary hover:underline">SIP-01 v1.2</Link> · heartbeat schema:
-            kind 16919 (indexstr)
+            spec: <Link to="/spec" className="text-primary hover:underline">SIP-01 v1.2</Link> · kind 16919
+            heartbeats: indexstr crawler nodes · any relay can host kind 39697
           </span>
         </div>
       </div>

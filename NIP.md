@@ -46,6 +46,11 @@ All events carry an `alt` tag with a human-readable description
 - **/explorer** — live kind 39697 explorer with a client-side validator and a
   URL → `d`-tag calculator implementing SIP-01 §7/§8 byte-compatibly.
 
+The dashboard and explorer read from the union of the known crawler publish
+pools (Crawlstr + indexstr), the NIP-50 search relays, and the user's own
+configured relays — kind 39697 lives on any relay, and the dashboard's
+per-relay coverage panel shows exactly where each window of data came from.
+
 ## Reference implementations (cross-checked by the audit)
 
 - [0xSearchstr](https://github.com/NostrDanish/0xSearchstr) — search engine + reference client impl

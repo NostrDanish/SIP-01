@@ -395,3 +395,26 @@ export const SEARCH_RELAYS = [
   'wss://search.nos.today/',
   'wss://relay.noswhere.com/',
 ];
+
+/**
+ * Relays the ecosystem's crawlers publish kind 39697 observations to — the
+ * union of the Crawlstr and indexstr relay pools (`src/crawler/relays.ts` in
+ * each repo). Any relay can host observations; these are simply the ones we
+ * know crawlers write to, so the dashboard reads from all of them. The
+ * Tor-only onion relay is omitted (a clearnet browser can't reach it).
+ */
+export const CRAWLER_RELAYS = [
+  'wss://relay-na1.metanomalist.com/',
+  'wss://jskitty.cat/nostr',
+  'wss://relay.primal.net/',
+  'wss://relay.damus.io/',
+  'wss://nostr.hifish.org/',
+];
+
+/**
+ * Every relay this site reads kind 39697 from: the NIP-50 search relays plus
+ * the crawler publish set. The UNCAGED index relay is deliberately NOT
+ * special here — it is just a relay with extra validation and search
+ * operators; observations live on any relay.
+ */
+export const OBSERVATION_RELAYS: string[] = [...new Set([...SEARCH_RELAYS, ...CRAWLER_RELAYS])];

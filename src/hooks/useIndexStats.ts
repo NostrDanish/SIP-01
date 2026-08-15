@@ -5,13 +5,19 @@
  * registry. Any crawler that starts publishing valid kind 39697 observations
  * (or kind 16919 heartbeats) appears on the dashboard automatically, which is
  * the point: Crwalstr, indexstr, and every future indexer share one pool.
+ *
+ * Reads fan out per relay over OBSERVATION_RELAYS — the union of the known
+ * crawler publish pools (Crawlstr + indexstr) and the NIP-50 search relays —
+ * plus the user's own relay pool. Kind 39697 lives on ANY relay (the index
+ * relay is just a relay with extra validation/search), so the dashboard reads
+ * the widest set we know and reports per-relay coverage alongside the stats.
  */
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 import { SIP01 } from '@/lib/sip01';
-import { SEARCH_RELAYS } from '@/lib/sip01';
+import { OBSERVATION_RELAYS } from '@/lib/sip01';
 import { parseSip01Event, validateSip01Event, type Sip01Observation } from '@/lib/sip01-utils';
 import {
   dedupeHeartbeats,
@@ -20,9 +26,12 @@ import {
   type ParsedHeartbeat,
 } from '@/lib/heartbeat';
 
-/** Pages of 500 observations walked backwards from "now". */
+/** Pages of 500 observations walked backwards from "now", per relay. */
 const OBS_PAGES = 4;
 const PAGE_SIZE = 500;
+
+/** Per-relay read timeout — one slow relay must not stall the dashboard. */
+const RELAY_TIMEOUT_MS = 12_000;
 
 async function fetchObservationWindow(
   queryFn: (filters: object[], opts: { signal: AbortSignal }) => Promise<NostrEvent[]>,
@@ -60,6 +69,20 @@ export interface IndexerStat {
   networks: string[];
 }
 
+/** Per-relay read result — the dashboard's provenance panel. */
+export interface RelayCoverage {
+  /** Relay URL, or a label for the user's own relay pool. */
+  url: string;
+  /** True for the user's configured relay pool entry. */
+  isPool: boolean;
+  /** Kind 39697 events this relay returned (before cross-relay dedup). */
+  observations: number;
+  /** Kind 16919 heartbeats this relay returned. */
+  heartbeats: number;
+  /** ok = answered; partial = answered but hit the read timeout; failed = unreachable. */
+  status: 'ok' | 'partial' | 'failed';
+}
+
 export interface IndexStats {
   observations: Sip01Observation[];
   /** Distinct d tags (unique documents). */
@@ -86,6 +109,8 @@ export interface IndexStats {
   docTypes: { name: string; count: number }[];
   /** Leaderboard of indexers. */
   indexers: IndexerStat[];
+  /** Per-relay provenance for the current window. */
+  relayCoverage: RelayCoverage[];
   /** Heartbeat network view (kind 16919), latest per node. */
   heartbeats: ParsedHeartbeat[];
   liveNodes: ParsedHeartbeat[];
@@ -101,22 +126,73 @@ export function useIndexStats() {
   const query = useQuery({
     queryKey: ['sip01-index-stats-v1'],
     queryFn: async (c) => {
-      const group = nostr.group(SEARCH_RELAYS);
-      const [obsSettled, poolSettled, hbSettled, hbPoolSettled] = await Promise.allSettled([
-        fetchObservationWindow((f, o) => group.query(f as never, o), c.signal),
-        fetchObservationWindow((f, o) => nostr.query(f as never, o), c.signal),
-        group.query([{ kinds: [HEARTBEAT_KIND], limit: 500 }], { signal: c.signal }),
-        nostr.query([{ kinds: [HEARTBEAT_KIND], limit: 500 }], { signal: c.signal }),
-      ]);
+      /* Fan out per relay so we can report exactly where the data lives.
+         NRelay1 auto-closes idle connections (30s), so per-run handles are
+         safe; each relay gets its own timeout so one slow relay can't stall
+         the page. */
+      const perRelay = await Promise.allSettled(
+        OBSERVATION_RELAYS.map(async (url) => {
+          const relay = nostr.relay(url);
+          const signal = AbortSignal.any([c.signal, AbortSignal.timeout(RELAY_TIMEOUT_MS)]);
+          const events = await fetchObservationWindow((f, o) => relay.query(f as never, o), signal);
+          let heartbeats: NostrEvent[] = [];
+          try {
+            heartbeats = await relay.query([{ kinds: [HEARTBEAT_KIND], limit: 500 }], { signal });
+          } catch {
+            /* timed out mid-read — keep whatever observations we got */
+          }
+          const timedOut = signal.aborted && !c.signal.aborted;
+          const gotData = events.length + heartbeats.length > 0;
+          const status: RelayCoverage['status'] = gotData ? (timedOut ? 'partial' : 'ok') : timedOut ? 'failed' : 'ok';
+          return { url, events, heartbeats, status };
+        }),
+      );
 
-      const obsEvents = [
-        ...(obsSettled.status === 'fulfilled' ? obsSettled.value : []),
-        ...(poolSettled.status === 'fulfilled' ? poolSettled.value : []),
-      ];
-      const hbEvents = [
-        ...(hbSettled.status === 'fulfilled' ? hbSettled.value : []),
-        ...(hbPoolSettled.status === 'fulfilled' ? hbPoolSettled.value : []),
-      ];
+      // The user's own NIP-65 pool, same treatment.
+      const poolSignal = AbortSignal.any([c.signal, AbortSignal.timeout(RELAY_TIMEOUT_MS)]);
+      const poolResult: {
+        events: NostrEvent[];
+        heartbeats: NostrEvent[];
+        timedOut: boolean;
+      } = { events: [], heartbeats: [], timedOut: false };
+      try {
+        poolResult.events = await fetchObservationWindow((f, o) => nostr.query(f as never, o), poolSignal);
+        poolResult.heartbeats = await nostr.query([{ kinds: [HEARTBEAT_KIND], limit: 500 }], { signal: poolSignal });
+        poolResult.timedOut = poolSignal.aborted && !c.signal.aborted;
+      } catch {
+        poolResult.timedOut = poolSignal.aborted && !c.signal.aborted;
+      }
+
+      const relayCoverage: RelayCoverage[] = [];
+      const obsEvents: NostrEvent[] = [];
+      const hbEvents: NostrEvent[] = [];
+
+      for (const [i, r] of perRelay.entries()) {
+        const url = OBSERVATION_RELAYS[i];
+        if (r.status === 'fulfilled') {
+          relayCoverage.push({
+            url,
+            isPool: false,
+            observations: r.value.events.length,
+            heartbeats: r.value.heartbeats.length,
+            status: r.value.status,
+          });
+          obsEvents.push(...r.value.events);
+          hbEvents.push(...r.value.heartbeats);
+        } else {
+          relayCoverage.push({ url, isPool: false, observations: 0, heartbeats: 0, status: 'failed' });
+        }
+      }
+      const poolGotData = poolResult.events.length + poolResult.heartbeats.length > 0;
+      relayCoverage.push({
+        url: 'your relay pool',
+        isPool: true,
+        observations: poolResult.events.length,
+        heartbeats: poolResult.heartbeats.length,
+        status: poolGotData ? (poolResult.timedOut ? 'partial' : 'ok') : poolResult.timedOut ? 'failed' : 'ok',
+      });
+      obsEvents.push(...poolResult.events);
+      hbEvents.push(...poolResult.heartbeats);
 
       const byId = new Map(obsEvents.map((e) => [e.id, e]));
       const observations = [...byId.values()]
@@ -194,6 +270,7 @@ export function useIndexStats() {
         networks: topOf(networkCount, 6),
         docTypes: topOf(typeCount, 6),
         indexers: [...indexerMap.values()].sort((a, b) => b.observations - a.observations).slice(0, 20),
+        relayCoverage,
         heartbeats,
         liveNodes,
         shardsCovered: new Set(liveNodes.map((hb) => hb.shard)).size,

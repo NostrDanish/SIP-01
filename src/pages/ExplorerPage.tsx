@@ -30,7 +30,7 @@ import {
   validateSip01Event,
   type Sip01Observation,
 } from '@/lib/sip01-utils';
-import { SEARCH_RELAYS, D_VECTORS, SIP01 } from '@/lib/sip01';
+import { OBSERVATION_RELAYS, D_VECTORS, SIP01 } from '@/lib/sip01';
 import { useSeoMeta } from '@/lib/seo';
 import { cn } from '@/lib/utils';
 import { sanitizeUrl } from '@/lib/sanitizeUrl';
@@ -44,14 +44,15 @@ function useObservations(topic: string) {
   return useQuery({
     queryKey: ['sip01-explorer', topic],
     queryFn: async (c) => {
-      const group = nostr.group(SEARCH_RELAYS);
+      // Read the union of the known crawler publish pools + NIP-50 search
+      // relays (kind 39697 lives on any relay), plus the user's own pool.
+      const group = nostr.group(OBSERVATION_RELAYS);
       const filter = topic
         ? { kinds: [SIP01.kind], '#t': [topic], limit: 60 }
         : { kinds: [SIP01.kind], limit: 60 };
-      // Wider net: also try the user's pool relays.
       const [groupEvents, poolEvents] = await Promise.allSettled([
-        group.query([filter], { signal: c.signal }),
-        nostr.query([filter], { signal: c.signal }),
+        group.query([filter], { signal: AbortSignal.any([c.signal, AbortSignal.timeout(12_000)]) }),
+        nostr.query([filter], { signal: AbortSignal.any([c.signal, AbortSignal.timeout(12_000)]) }),
       ]);
       const all = [
         ...(groupEvents.status === 'fulfilled' ? groupEvents.value : []),
@@ -427,8 +428,8 @@ export default function ExplorerPage() {
             )}
 
             <p className="text-xs text-muted-foreground mt-8 font-mono">
-              sources: {SEARCH_RELAYS.map((r) => r.replace('wss://', '').replace(/\/$/, '')).join(' · ')} + your
-              configured relays
+              sources: {OBSERVATION_RELAYS.map((r) => r.replace('wss://', '').replace(/\/$/, '')).join(' · ')} +
+              your configured relays
             </p>
           </div>
 
