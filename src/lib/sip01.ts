@@ -1,13 +1,13 @@
 /**
  * SIP-01 structured protocol data — the single source of truth for the
- * documentation site. Mirrors public/spec/SIP-01.md (v1.1).
+ * documentation site. Mirrors public/spec/SIP-01.md (v1.2).
  */
 
 export const SIP01 = {
   name: 'Search Index Protocol',
   short: 'SIP-01',
   kind: 39697,
-  version: '1.1',
+  version: '1.2',
   schemaVersion: '1',
   dPrefix: 'widx:',
   tagline:
@@ -131,7 +131,7 @@ export const CORE_TAGS: TagSpec[] = [
   { tag: 'description', location: 'content', requirement: 'optional', shape: 'string ≤ 1000 chars', relayIndexed: false, status: 'core', description: 'Plain-text summary, no markup.' },
   { tag: 'image', location: 'content', requirement: 'optional', shape: 'https: URL ≤ 2048 chars', relayIndexed: false, status: 'core', description: 'Representative image. https only.' },
   { tag: 't', requirement: 'optional', shape: '0–8 × ^[a-z0-9][a-z0-9-]{0,99}$', relayIndexed: true, status: 'core', description: 'Lowercase topics. How topical engines slice the index without a new kind.' },
-  { tag: 'l', requirement: 'optional', shape: 'ISO 639-1, ^[a-z]{2}$', relayIndexed: true, status: 'core', description: 'Document language (NIP-23/24 convention). Takes precedence over detection.' },
+  { tag: 'l', requirement: 'optional', shape: 'ISO 639-1, ^[a-z]{2}$', relayIndexed: true, status: 'core', description: 'Document language — the NIP-32 labeling convention in bare two-letter form (§12.5). Takes precedence over detection.' },
   { tag: 'x', requirement: 'optional', shape: '64 lowercase hex', relayIndexed: true, status: 'core', description: 'Content identity: sha256(title + "\\n" + description). Same d + same x = indexers agree.' },
   { tag: 'published', requirement: 'optional', shape: 'unix seconds', relayIndexed: false, status: 'core', description: 'The page’s claimed publication time. (Observation time is the event’s created_at.)' },
   { tag: 'source', requirement: 'optional', shape: '≤ 100 chars', relayIndexed: false, status: 'core', description: 'Indexer software id, e.g. crawlstr/1. Informational — the pubkey is the real identity.' },
@@ -197,6 +197,41 @@ export const BASELINE_FILTERS = [
 ];
 
 /* ------------------------------------------------------------------ */
+/* NIP dependency table (spec §20.1 — audited against upstream, v1.2)  */
+/* ------------------------------------------------------------------ */
+
+export interface NipDependency {
+  nip: string;
+  url: string;
+  /** What SIP-01 actually uses from the NIP. */
+  uses: string;
+  type: 'normative' | 'informational';
+  requirement: 'required' | 'optional' | 'none';
+  /** Display qualifier, e.g. "foundation", "relay-facing", "acceleration". */
+  qualifier: string;
+  /** What happens when an implementation doesn't support the NIP. */
+  unsupported: string;
+}
+
+const NIP_REPO = 'https://github.com/nostr-protocol/nips/blob/master';
+
+export const NIP_DEPENDENCIES: NipDependency[] = [
+  { nip: 'NIP-01', url: `${NIP_REPO}/01.md`, uses: 'Event structure, Schnorr signatures, tags, filters, relay messaging, single-letter tag-indexing convention, addressable-kind semantics (30000–39999)', type: 'normative', requirement: 'required', qualifier: 'foundation', unsupported: 'n/a — kind 39697 is an ordinary NIP-01 event; without NIP-01 there is no Nostr' },
+  { nip: 'NIP-11', url: `${NIP_REPO}/11.md`, uses: 'Relay information document; custom-field extensibility (the uncaged_index block, §15) and supported_nips capability discovery', type: 'normative', requirement: 'optional', qualifier: 'relay-facing', unsupported: 'Clients cannot pre-discover scope or operator support; they probe or use baseline filters' },
+  { nip: 'NIP-19', url: `${NIP_REPO}/19.md`, uses: 'bech32 identifiers (npub, naddr, …) for human-facing links and inputs', type: 'informational', requirement: 'optional', qualifier: 'presentation', unsupported: 'Nothing — the wire format uses hex exclusively; NIP-19 is display/input sugar' },
+  { nip: 'NIP-23', url: `${NIP_REPO}/23.md`, uses: 'Comparison point for published vs. published_at (§12.2)', type: 'informational', requirement: 'none', qualifier: 'compatibility', unsupported: 'Nothing — SIP-01 deliberately uses published' },
+  { nip: 'NIP-24', url: `${NIP_REPO}/24.md`, uses: 'De-facto lowercase t hashtag convention', type: 'informational', requirement: 'none', qualifier: 'compatibility', unsupported: 'Nothing — SIP-01’s t shape is stricter and self-contained (§6)' },
+  { nip: 'NIP-31', url: `${NIP_REPO}/31.md`, uses: 'Origin of the alt convention (§12.3); unrecommended upstream', type: 'informational', requirement: 'none', qualifier: 'convention', unsupported: 'Nothing — alt is a SIP-01 presentation requirement, never parsed' },
+  { nip: 'NIP-32', url: `${NIP_REPO}/32.md`, uses: 'Origin of the l label convention (ISO-639-1 language labels); SIP-01 uses the bare form (§12.5)', type: 'informational', requirement: 'none', qualifier: 'convention', unsupported: 'Nothing — l is a self-contained two-letter field' },
+  { nip: 'NIP-33', url: `${NIP_REPO}/33.md`, uses: 'Historical definition of addressable events — merged into NIP-01; cited only for readers following older references', type: 'informational', requirement: 'none', qualifier: 'historical', unsupported: 'n/a — see NIP-01' },
+  { nip: 'NIP-45', url: `${NIP_REPO}/45.md`, uses: 'COUNT verb for cheap relay-side counts (§15)', type: 'normative', requirement: 'optional', qualifier: 'where used', unsupported: 'Fetch the #d group and count distinct pubkeys client-side (§18)' },
+  { nip: 'NIP-50', url: `${NIP_REPO}/50.md`, uses: 'The search filter field and its key:value extension mechanism (§15); SIP-01 defines only the meaning of its operators on aware relays', type: 'normative', requirement: 'optional', qualifier: 'acceleration', unsupported: 'Baseline NIP-01 filters keep working; relays SHOULD ignore unknown operators' },
+  { nip: 'NIP-77', url: `${NIP_REPO}/77.md`, uses: 'Negentropy sync for relay federation (§15)', type: 'normative', requirement: 'optional', qualifier: 'federation', unsupported: 'Relays replicate with ordinary REQ/EVENT traffic; the index still converges' },
+  { nip: 'NIP-78', url: `${NIP_REPO}/78.md`, uses: 'Rationale for rejecting kind 30078 as the index format (§2); legacy query caches (§17)', type: 'informational', requirement: 'none', qualifier: 'comparison', unsupported: 'Nothing' },
+  { nip: 'NIP-94', url: `${NIP_REPO}/94.md`, uses: 'Origin of the x tag letter (§12.1)', type: 'informational', requirement: 'none', qualifier: 'comparison', unsupported: 'Nothing' },
+];
+
+/* ------------------------------------------------------------------ */
 /* Test vectors (spec §13 — real, reproducible)                        */
 /* ------------------------------------------------------------------ */
 
@@ -226,12 +261,12 @@ export interface Finding {
 }
 
 export const AUDIT_VERIFIED = [
-  { claim: 'Kind 39697 is addressable-range', evidence: '30000 ≤ 39697 ≤ 39999 per NIP-01/NIP-33. One live slot per (pubkey, d); recrawl replaces.', ok: true },
+  { claim: 'Kind 39697 is addressable-range', evidence: '30000 ≤ 39697 ≤ 39999 per NIP-01’s kind-range conventions (addressable events were formerly NIP-33, now folded into NIP-01). One live slot per (pubkey, d); recrawl replaces.', ok: true },
   { claim: 'Kind 39697 is unregistered', evidence: 'Absent from the official kind registry (neighbors: 39089/39092 starter packs, 39701 web bookmarks). Draft allocation stands.', ok: true },
   { claim: 'd = widx: + sha256(normalized u)[0:32]', evidence: 'Byte-identical in 0xSearchstr, UNCAGED-ENGINE, Crwalstr and the UNCAGED relay. Verified against independently computed SHA-256 vectors (§13).', ok: true },
   { claim: 'x = sha256(title + "\\n" + description)', evidence: 'Same formula in all four implementations; relay verifies it at ingestion and rejects mismatches.', ok: true },
   { claim: 'Tracking-parameter list (14 params)', evidence: 'Identical sets in client, crawler and relay implementations.', ok: true },
-  { claim: 'NIP-50 extension usage is spec-compliant', evidence: 'NIP-50 explicitly allows key:value extensions and requires relays to ignore unsupported ones — operator queries are safe to send anywhere.', ok: true },
+  { claim: 'NIP-50 extension usage is spec-compliant', evidence: 'NIP-50 explicitly allows key:value extensions and directs relays to ignore unsupported ones (SHOULD) — operator queries are safe to send anywhere.', ok: true },
   { claim: 'Single-letter tags are relay-filterable', evidence: 'd, u, t, l, x, v are all single-letter → #tag filters work on every stock NIP-01 relay. Baseline queries need nothing custom.', ok: true },
   { claim: 'NIP-11 custom field is legal', evidence: 'The relay information document permits implementation-specific fields; uncaged_index advertises scope, languages and supported operators.', ok: true },
   { claim: 'NIP-77 federation claim', evidence: 'NEG-OPEN takes a filter; syncing {"kinds":[39697]} between relays is valid negentropy usage.', ok: true },
@@ -316,6 +351,37 @@ export const AUDIT_FINDINGS: Finding[] = [
     detail: 'The relay profile approximates independent-indexer counts via COUNT with distinct:author — a UNCAGED extension beyond base NIP-45.',
     resolution: 'Fine as an acceleration; v1.1 keeps the portable path (fetch #d observations, count distinct pubkeys client-side) as the baseline.',
   },
+];
+
+/* ------------------------------------------------------------------ */
+/* NIP dependency re-audit (v1.2) — every cited NIP re-verified        */
+/* against the current upstream nostr-protocol/nips repository.        */
+/* ------------------------------------------------------------------ */
+
+export interface NipReauditRow {
+  nip: string;
+  /** Upstream status line at audit time, e.g. "draft · optional · relay". */
+  upstream: string;
+  /** ok = citation accurate; fixed = citation corrected in v1.2. */
+  result: 'ok' | 'fixed';
+  note: string;
+}
+
+export const NIP_REAUDIT: NipReauditRow[] = [
+  { nip: 'NIP-01', upstream: 'draft · mandatory', result: 'ok', note: 'Now defines addressable events directly (absorbed NIP-33). Single-letter tag-indexing convention confirmed; alt even appears in NIP-01’s own tag example — reinforcing the §12.3 “convention, not NIP-31 dependency” framing.' },
+  { nip: 'NIP-11', upstream: 'draft · optional · relay', result: 'ok', note: 'Custom fields explicitly permitted — clients MUST ignore fields they don’t understand. The uncaged_index block and supported_nips discovery are the legal advertisement path.' },
+  { nip: 'NIP-19', upstream: 'draft · optional', result: 'ok', note: 'bech32 is “not meant to be used anywhere in the core protocol” — matches SIP-01’s presentation-only usage; the wire format stays hex.' },
+  { nip: 'NIP-23', upstream: 'draft · optional', result: 'ok', note: 'published_at citation (§12.2) accurate. Defines no l tag — see the NIP-32 row.' },
+  { nip: 'NIP-24', upstream: 'draft · optional', result: 'ok', note: 'Defines the de-facto lowercase t hashtag — aligns with SIP-01’s stricter t shape. Defines no l tag.' },
+  { nip: 'NIP-31', upstream: 'draft · unrecommended', result: 'ok', note: 'Still marked unrecommended (“unnecessarily bloated”) upstream — §12.3’s alt-as-convention framing stands.' },
+  { nip: 'NIP-32', upstream: 'draft · optional', result: 'fixed', note: 'The actual home of the l label tag, with the ISO-639-1 language example. v1.1 wrongly cited NIP-23/24; v1.2 cites NIP-32 and documents the deliberate bare-form deviation in §12.5.' },
+  { nip: 'NIP-33', upstream: 'merged into NIP-01', result: 'fixed', note: 'Upstream text: “Renamed to ‘Addressable events’ and moved to NIP-01.” v1.1 cited NIP-33 as the addressable-events spec; v1.2 cites NIP-01 and marks NIP-33 historical.' },
+  { nip: 'NIP-45', upstream: 'draft · optional · relay', result: 'ok', note: 'COUNT verb confirmed. distinct:author remains a relay extension beyond base NIP-45 (finding F9); §15 now states the COUNT baseline explicitly.' },
+  { nip: 'NIP-50', upstream: 'draft · optional · relay', result: 'fixed', note: 'The extension rule is SHOULD-ignore, not a hard requirement — wording softened. Real collision found: NIP-50’s own registered domain: extension (author NIP-05 domain) vs. SIP-01’s domain: (document URL host) — §15 now disambiguates and recommends site: when the relay’s nature is unknown.' },
+  { nip: 'NIP-77', upstream: 'draft · optional · relay', result: 'ok', note: 'NEG-OPEN takes a NIP-01 filter — the §15 federation claim holds verbatim.' },
+  { nip: 'NIP-78', upstream: 'draft · optional', result: 'ok', note: '“Applications that do not care about interoperability” — the §2 rejection rationale is verbatim accurate.' },
+  { nip: 'NIP-94', upstream: 'draft · optional', result: 'ok', note: 'x = SHA-256 of the file binary — the §12.1 deviation note is accurate.' },
+  { nip: 'kind registry', upstream: 'README event-kinds table', result: 'ok', note: 'Kind 39697 remains unregistered upstream (neighbors: 39089/39092 starter packs, 39701 web bookmarks). The draft allocation stands.' },
 ];
 
 /* ------------------------------------------------------------------ */

@@ -36,7 +36,9 @@ All events carry an `alt` tag with a human-readable description
 ## This site
 
 - **/spec** — the full submission-ready specification (also downloadable as
-  raw markdown from `/spec/SIP-01.md`).
+  raw markdown from `/spec/SIP-01.md`), including the §20.1 NIP dependency
+  table: every referenced NIP, what SIP-01 uses from it, whether the reference
+  is normative, and what breaks when it's unsupported.
 - **/registry** — the core + extension tag registry and how to extend it.
 - **/query** — query reference (NIP-01 filters, NIP-50 operators, NIP-11
   capability advertisement, NIP-77 federation).

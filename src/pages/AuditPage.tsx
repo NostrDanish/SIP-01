@@ -1,8 +1,8 @@
-import { AlertTriangle, Bug, CheckCircle2, Info } from 'lucide-react';
+import { AlertTriangle, Bug, CheckCircle2, Info, Wrench } from 'lucide-react';
 
 import { Layout } from '@/components/Layout';
-import { C, Callout, CodeBlock, DocSection, Pill } from '@/components/doc';
-import { AUDIT_FINDINGS, AUDIT_VERIFIED, REPOS } from '@/lib/sip01';
+import { C, Callout, CodeBlock, DocSection, Pill, SpecTable } from '@/components/doc';
+import { AUDIT_FINDINGS, AUDIT_VERIFIED, NIP_REAUDIT, REPOS } from '@/lib/sip01';
 import { useSeoMeta } from '@/lib/seo';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +29,7 @@ export default function AuditPage() {
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <Pill tone="gold">audit</Pill>
             <Pill tone="opt">2026-08 · v1 → v1.1</Pill>
+            <Pill tone="opt">+ v1.2 NIP dependency re-audit</Pill>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Fact-Check &amp; Audit</h1>
           <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl">
@@ -122,7 +123,34 @@ export default function AuditPage() {
             </div>
           </DocSection>
 
-          <DocSection id="headline-bug" number="4" title="The headline bug, reproduced">
+          <DocSection id="nip-reaudit" number="4" title="NIP dependency re-audit (v1.2)">
+            <p>
+              NIPs evolve — a citation accurate at drafting time may be stale at review time. For v1.2, every
+              referenced NIP was re-read from the current{' '}
+              <a href="https://github.com/nostr-protocol/nips" target="_blank" rel="noreferrer" className="text-primary hover:underline">upstream
+              repository</a> rather than trusted from v1.1. Three citations needed correction; the wire format
+              needed none.
+            </p>
+            <SpecTable
+              head={['Reference', 'Upstream status', 'Verdict', 'Notes']}
+              rows={NIP_REAUDIT.map((r) => [
+                <span key="n" className="font-mono text-xs font-semibold whitespace-nowrap">{r.nip}</span>,
+                <span key="u" className="font-mono text-xs text-muted-foreground whitespace-nowrap">{r.upstream}</span>,
+                r.result === 'ok'
+                  ? <span key="r" className="inline-flex items-center gap-1.5 text-emerald-500 text-xs font-mono whitespace-nowrap"><CheckCircle2 className="size-3.5" />accurate</span>
+                  : <span key="r" className="inline-flex items-center gap-1.5 text-amber-500 text-xs font-mono whitespace-nowrap"><Wrench className="size-3.5" />fixed in v1.2</span>,
+                <span key="t" className="text-xs leading-relaxed text-muted-foreground">{r.note}</span>,
+              ])}
+            />
+            <Callout kind="ok" title="Outcome: citations fixed, protocol untouched">
+              The three fixes — NIP-33 folded into NIP-01, the <C>l</C> convention re-cited from NIP-23/24 to
+              NIP-32 (new §12.5), and NIP-50’s SHOULD-level extension rule (plus the <C>domain:</C> collision
+              note in §15) — are documentation corrections. No field, hash, or normalization rule changed. The
+              explicit dependency table now lives in spec §20.1.
+            </Callout>
+          </DocSection>
+
+          <DocSection id="headline-bug" number="5" title="The headline bug, reproduced">
             <p>
               The v1 spec’s own example event would be <strong className="text-foreground">rejected by the
               ecosystem’s relay</strong>. Its <C>d</C> tag was <C>widx:9f86d081884c7d659a2feaa0c55ad015</C> —
@@ -140,10 +168,10 @@ export default function AuditPage() {
             </Callout>
           </DocSection>
 
-          <DocSection id="submission" number="5" title="NIP submission readiness">
+          <DocSection id="submission" number="6" title="NIP submission readiness">
             <p>
               The NIPs repo bar is: implemented in at least two clients and one relay, makes sense, optional and
-              backwards-compatible, one way of doing each thing. SIP-01 v1.1’s position:
+              backwards-compatible, one way of doing each thing. SIP-01 v1.2’s position:
             </p>
             <ul className="list-disc pl-6 space-y-1.5">
               <li>
@@ -160,10 +188,16 @@ export default function AuditPage() {
                 one content hash — the registry channels variation into documented extension tags.
               </li>
               <li>
+                <strong className="text-foreground">Dependencies, explicit:</strong> spec §20.1 tabulates every
+                referenced NIP — what SIP-01 actually uses, whether the reference is normative, and what breaks
+                when it’s unsupported. NIP-01 is the only hard dependency; nothing is reinvented that an
+                existing NIP already provides.
+              </li>
+              <li>
                 <strong className="text-foreground">Reviewer risks, pre-answered:</strong> the <C>x</C>/NIP-94
-                semantic difference, the <C>published</C>/<C>published_at</C> naming, and the required{' '}
-                <C>alt</C> tag vs. NIP-31’s unrecommended status are each addressed in §12 before they can be
-                raised.
+                semantic difference, the <C>published</C>/<C>published_at</C> naming, the required <C>alt</C>{' '}
+                tag vs. NIP-31’s unrecommended status, the bare <C>l</C> tag vs. NIP-32’s label form, and the
+                NIP-33 → NIP-01 merge are each addressed in §12 and §20 before they can be raised.
               </li>
             </ul>
           </DocSection>

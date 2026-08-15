@@ -3,7 +3,7 @@ import { Check, Copy, Download, ListTree } from 'lucide-react';
 
 import { Layout } from '@/components/Layout';
 import { C, Callout, CodeBlock, DocSection, Pill, SpecTable } from '@/components/doc';
-import { CORE_TAGS, D_VECTORS, EXTENSION_TAGS, SIP01, X_VECTORS } from '@/lib/sip01';
+import { CORE_TAGS, D_VECTORS, EXTENSION_TAGS, NIP_DEPENDENCIES, SIP01, X_VECTORS } from '@/lib/sip01';
 import { useSeoMeta } from '@/lib/seo';
 
 const TOC = [
@@ -27,7 +27,7 @@ const TOC = [
   { id: 'compatibility', n: '17', label: 'Compatibility & migration' },
   { id: 'search-nodes', n: '18', label: 'Search node behavior' },
   { id: 'examples', n: '19', label: 'Examples' },
-  { id: 'references', n: '20', label: 'References' },
+  { id: 'references', n: '20', label: 'NIP dependencies & references' },
 ];
 
 const FULL_EVENT = `{
@@ -71,7 +71,7 @@ const EXTENDED_EVENT = `{
     ["t", "crawler"],
     ["t", "search"],
     ["l", "en"],
-    ["x", "<sha256(title + \\"\\\\n\\" + description)>"],
+    ["x", "babd08c579e107b98a360a7f713d5d822bbd9f24087b86d98404db214f0e5500"],
     ["v", "1"],
     ["type", "repository"],
     ["platform", "github"],
@@ -215,8 +215,8 @@ export default function SpecPage() {
                   rows={[
                     [<C key="k">Kind</C>, <strong key="v" className="font-mono text-primary">39697</strong>],
                     [<C key="k">Name</C>, 'Web Index Observation'],
-                    [<C key="k">Range</C>, 'Addressable (30000–39999, NIP-01/NIP-33)'],
-                    [<C key="k">Registry status</C>, 'Unused by any registered NIP at time of writing (draft allocation)'],
+                    [<C key="k">Range</C>, 'Addressable (30000–39999, NIP-01 kind-range conventions; formerly NIP-33)'],
+                    [<C key="k">Registry status</C>, 'Unused by any registered NIP at time of writing (draft allocation, re-verified in v1.2)'],
                   ]}
                 />
                 <p>Addressability is deliberate:</p>
@@ -451,6 +451,21 @@ export default function SpecPage() {
                   does not change the event format: other relays remain free to store kind 39697 without
                   validation.
                 </p>
+                <h3 className="text-lg font-semibold pt-2">12.5 The bare l tag (vs. NIP-32’s label form)</h3>
+                <p>
+                  Upstream, the <C>l</C> tag is defined by <strong>NIP-32 (Labeling)</strong> as a <em>label</em>{' '}
+                  qualified by an <C>L</C> namespace tag — a language self-label would be{' '}
+                  <C>["L", "ISO-639-1"]</C> + <C>["l", "en", "ISO-639-1"]</C>, and an unmarked <C>l</C> implies
+                  the <C>ugc</C> namespace. SIP-01 instead uses the bare two-element form <C>["l", "en"]</C> as a
+                  dedicated document-language field: publishers SHOULD include at most one (consumers read the
+                  first), validated as <C>^[a-z]{'{'}2{'}'}$</C>. Language is a first-class, single-valued index
+                  field (aware relays map it to a <C>language</C> keyword field and the <C>lang:</C> operator),
+                  not an open-ended label, and the
+                  bare form keeps high-volume records small. The forms never collide inside kind 39697 because
+                  SIP-01 events carry no <C>L</C> tags; a consumer that wants NIP-32 semantics can read the bare{' '}
+                  <C>l</C> as a self-reported <C>ISO-639-1</C> label. (Revisions ≤ v1.1 wrongly cited
+                  NIP-23/NIP-24 for this convention — neither defines an <C>l</C> tag.)
+                </p>
               </DocSection>
 
               <DocSection id="test-vectors" number="13" title="Test vectors">
@@ -514,9 +529,16 @@ export default function SpecPage() {
                   <li>
                     <strong>Acceleration (optional):</strong> NIP-50 <C>search</C> on capable relays with
                     web-search operators (<C>site:</C>, <C>domain:</C>, <C>url:</C>, …). NIP-50 explicitly
-                    sanctions <C>key:value</C> extensions and requires relays to ignore ones they don’t support,
-                    so these queries are safe to send anywhere. Full table:{' '}
+                    sanctions <C>key:value</C> extensions and directs relays to ignore ones they don’t support
+                    (SHOULD), so these queries are safe to send anywhere. Full table:{' '}
                     <a href="/query" className="text-primary hover:underline">query reference</a>.
+                  </li>
+                  <li>
+                    <strong>Counting (optional):</strong> where relays support NIP-45, <C>["COUNT", …]</C>{' '}
+                    yields cheap observation counts (e.g. per <C>#d</C>). The portable baseline remains fetching
+                    the <C>#d</C> group and counting distinct pubkeys client-side (§18). Relay-specific
+                    extensions (e.g. distinct-author counting) are relay-profile features, not part of this
+                    document format.
                   </li>
                   <li>
                     <strong>Federation:</strong> NIP-77 negentropy sync works on any filter —{' '}
@@ -524,6 +546,23 @@ export default function SpecPage() {
                     global index.
                   </li>
                 </ul>
+                <Callout kind="warn" title="NIP-50 precision notes">
+                  <ul className="list-disc pl-5 space-y-1.5">
+                    <li>
+                      Operator support is per-relay. SIP-01 does <strong>not</strong> claim its operators are
+                      universally supported by all NIP-50 relays — clients SHOULD check <C>supported_nips</C>{' '}
+                      for <C>50</C> and the <C>uncaged_index</C> block below before relying on SIP-01 operator
+                      semantics.
+                    </li>
+                    <li>
+                      <C>domain:</C> collides with NIP-50’s own registered extension (events whose{' '}
+                      <em>author</em> has a NIP-05 identifier at the domain). SIP-01-aware relays give it
+                      document-URL semantics (exact host match); a generic NIP-50 relay may interpret it per
+                      NIP-05. When the relay’s nature is unknown, prefer <C>site:</C> — it has no upstream
+                      collision.
+                    </li>
+                  </ul>
+                </Callout>
                 <p>SIP-01-aware relays SHOULD advertise their scope in the NIP-11 relay information document:</p>
                 <CodeBlock code={NIP11_BLOCK} title="nip-11 · capability advertisement" />
               </DocSection>
@@ -570,13 +609,49 @@ export default function SpecPage() {
               <DocSection id="examples" number="19" title="Examples">
                 <p>Minimal valid event (only required fields; every value real):</p>
                 <CodeBlock code={MINIMAL_EVENT} title="minimal · self-consistent" />
-                <p>An event with extension tags (§9):</p>
-                <CodeBlock code={EXTENDED_EVENT} title="with extensions" />
+                <p>
+                  An event with extension tags (§9) — also fully self-consistent: <C>d</C> is §13.1 vector 4 and{' '}
+                  <C>x</C> is the real <C>sha256(title + "\n" + description)</C> of its content.
+                </p>
+                <CodeBlock code={EXTENDED_EVENT} title="with extensions · self-consistent" />
               </DocSection>
 
-              <DocSection id="references" number="20" title="References">
+              <DocSection id="references" number="20" title="NIP dependencies & references">
+                <p>
+                  SIP-01 is deliberately the smallest possible new piece: where an existing NIP already provides
+                  a primitive, SIP-01 reuses it rather than defining a competing mechanism. Following the NIPs
+                  repository’s own guidance — <em>the NIP list is not a checklist; each application implements
+                  the subset relevant to its use case</em> — this table states exactly what SIP-01 takes from
+                  each referenced NIP, whether the reference is normative, and what happens when an
+                  implementation doesn’t support it. Statuses were re-verified against the upstream{' '}
+                  <a href="https://github.com/nostr-protocol/nips" target="_blank" rel="noreferrer" className="text-primary hover:underline">nostr-protocol/nips</a>{' '}
+                  repository for v1.2 — never assume an older citation is still accurate without checking
+                  upstream.
+                </p>
+                <h3 className="text-lg font-semibold pt-2">20.1 Dependency table</h3>
+                <SpecTable
+                  head={['NIP', 'What SIP-01 uses', 'Type', 'Requirement', 'If unsupported']}
+                  rows={NIP_DEPENDENCIES.map((d) => [
+                    <a key="n" href={d.url} target="_blank" rel="noreferrer" className="font-mono text-xs font-semibold text-primary hover:underline whitespace-nowrap">{d.nip}</a>,
+                    <span key="u" className="text-xs leading-relaxed">{d.uses}</span>,
+                    <span key="t" className="font-mono text-xs text-muted-foreground whitespace-nowrap">{d.type}</span>,
+                    d.requirement === 'required'
+                      ? <Pill key="r" tone="req">required · {d.qualifier}</Pill>
+                      : d.requirement === 'optional'
+                        ? <Pill key="r" tone="opt">optional · {d.qualifier}</Pill>
+                        : <Pill key="r" tone="opt">none · {d.qualifier}</Pill>,
+                    <span key="i" className="text-xs leading-relaxed text-muted-foreground">{d.unsupported}</span>,
+                  ])}
+                />
+                <Callout kind="info" title="NIP-01 is the only hard dependency">
+                  This table is not a requirement that every implementation support every listed NIP — it exists
+                  to make the protocol boundaries explicit. Everything beyond NIP-01 is optional acceleration,
+                  relay-facing metadata, or documentation of where a convention was borrowed from. Don’t add a
+                  NIP reference merely because it sounds related: every row above states a concrete, audited
+                  relationship.
+                </Callout>
+                <h3 className="text-lg font-semibold pt-2">20.2 Other references</h3>
                 <ul className="list-disc pl-6 space-y-1.5 text-muted-foreground">
-                  <li>NIP-01 (events, addressable kinds, tag indexing), NIP-11 (relay information document), NIP-19 (bech32), NIP-31 (alt convention), NIP-33 (addressable events), NIP-45 (counts), NIP-50 (search capability), NIP-77 (negentropy sync), NIP-78 (app data)</li>
                   <li>
                     Relay profile:{' '}
                     <a className="text-primary hover:underline" href="https://github.com/NostrDanish/UNCAGED-Index-Relay/blob/main/docs/SIP-01.md" target="_blank" rel="noreferrer">

@@ -421,7 +421,7 @@ export default function DashboardPage() {
         <div className="mt-10 flex items-center gap-2 text-xs text-muted-foreground font-mono">
           <Tags className="size-3.5" />
           <span>
-            spec: <Link to="/spec" className="text-primary hover:underline">SIP-01 v1.1</Link> · heartbeat schema:
+            spec: <Link to="/spec" className="text-primary hover:underline">SIP-01 v1.2</Link> · heartbeat schema:
             kind 16919 (indexstr)
           </span>
         </div>

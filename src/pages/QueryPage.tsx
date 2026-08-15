@@ -38,7 +38,8 @@ export default function QueryPage() {
           <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl">
             Two layers, one guarantee: <strong className="text-foreground">plain NIP-01 filters work on every
             relay</strong>, and NIP-50 operators accelerate on SIP-01-aware relays. Queries with unknown
-            operators are always safe — NIP-50 requires relays to ignore extensions they don’t support.
+            operators are always safe — NIP-50 directs relays to ignore extensions they don’t support
+            (SHOULD), and SIP-01 defines only what its operators <em>mean</em>, never a new query mechanism.
           </p>
         </header>
 
@@ -61,6 +62,13 @@ export default function QueryPage() {
 
 # distinct pubkey count in the result set = independent indexer count`}
             />
+            <Callout kind="info" title="Cheap counts — NIP-45 (optional)">
+              Where a relay supports NIP-45, <C>["COUNT", "obs", {'{ "kinds": [39697], "#d": ["widx:…"] }'}]</C>{' '}
+              returns <C>{'{ "count": … }'}</C> without transferring events. Handy for dashboards — but the
+              portable baseline stays fetch-and-count: distinct <C>pubkey</C>s per <C>d</C> is a number no
+              plain COUNT can give you anyway (the UNCAGED relay’s <C>distinct:author</C> is a relay extension
+              beyond base NIP-45, not part of the protocol).
+            </Callout>
           </DocSection>
 
           <DocSection id="nip50" number="2" title="Acceleration — NIP-50 web-search operators">
@@ -90,6 +98,13 @@ export default function QueryPage() {
               Native <C>since</C>/<C>until</C> filter on <strong>observation time</strong> (the event’s{' '}
               <C>created_at</C>). The <C>before:</C>/<C>after:</C> operators range over the page’s{' '}
               <strong>claimed publication time</strong> (the <C>published</C> tag). Two clocks, both queryable.
+            </Callout>
+            <Callout kind="warn" title="Operator semantics are per-relay — check NIP-11 first">
+              These meanings hold on <strong>SIP-01-aware relays</strong> (advertised via{' '}
+              <C>supported_nips</C> + the <C>uncaged_index</C> block below). One name collides upstream: NIP-50’s
+              own registered <C>domain:</C> extension filters by the author’s NIP-05 domain, while SIP-01’s{' '}
+              <C>domain:</C> matches the document’s URL host. On a relay of unknown nature, prefer{' '}
+              <C>site:</C> — it has no upstream collision.
             </Callout>
           </DocSection>
 

@@ -64,7 +64,7 @@ Every hash in this README is real and reproducible — see
 
 | Document | Contents |
 |---|---|
-| **[`public/spec/SIP-01.md`](public/spec/SIP-01.md)** | The full, submission-ready specification (v1.1) |
+| **[`public/spec/SIP-01.md`](public/spec/SIP-01.md)** | The full, submission-ready specification (v1.2), incl. the §20.1 NIP dependency table |
 | **[`docs/IMPLEMENTATION-GUIDE.md`](docs/IMPLEMENTATION-GUIDE.md)** | Integration guide: publish, consume, or relay the index |
 | **[`NIP.md`](NIP.md)** | Schema summary (repo convention) |
 | Site `/dashboard` | Live public index stats — observations, documents, indexers, crawler heartbeats |
@@ -140,7 +140,10 @@ Full walkthroughs: [`docs/IMPLEMENTATION-GUIDE.md`](docs/IMPLEMENTATION-GUIDE.md
 SIP-01 v1 was fact-checked line-by-line against all five implementations and the official NIP
 registry. Ten claims verified; nine findings — including a spec example that its own relay would
 reject (placeholder hashes) and extension tags implemented but undocumented — are resolved in v1.1.
-Full report: the site’s `/audit` page.
+A follow-up **NIP dependency re-audit** (v1.2) re-verified every cited NIP against the current
+upstream `nostr-protocol/nips` repository: NIP-33 has been folded into NIP-01, the `l` convention
+lives in NIP-32 (not NIP-23/24), and NIP-50's extension rule is SHOULD-level — all fixed in
+documentation, with zero wire-format changes. Full report: the site’s `/audit` page.
 
 ## Contributing
 
