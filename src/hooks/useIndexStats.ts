@@ -83,6 +83,37 @@ export interface RelayCoverage {
   status: 'ok' | 'partial' | 'failed';
 }
 
+/** Observation-layer stats for one publisher software family (source tag). */
+export interface SourceFamilyStat {
+  /** Family key: 'crawlstr' | 'indexstr' | 'other'. */
+  family: 'crawlstr' | 'indexstr' | 'other';
+  /** Display label. */
+  label: string;
+  observations: number;
+  /** Distinct indexer pubkeys in this family. */
+  indexers: number;
+  /** Distinct d tags in this family. */
+  documents: number;
+  /** Newest observation time (unix seconds), 0 when none. */
+  lastSeen: number;
+  /** Raw source strings seen, e.g. ['crawlstr/1']. */
+  sources: string[];
+}
+
+/** Classify an observation's source tag into a known publisher family. */
+function sourceFamily(source: string | undefined): SourceFamilyStat['family'] {
+  const s = (source ?? '').toLowerCase();
+  if (s.startsWith('crawlstr')) return 'crawlstr';
+  if (s.startsWith('indexstr')) return 'indexstr';
+  return 'other';
+}
+
+const FAMILY_LABELS: Record<SourceFamilyStat['family'], string> = {
+  crawlstr: 'Crawlstr scouts',
+  indexstr: 'indexstr network',
+  other: 'Other publishers',
+};
+
 export interface IndexStats {
   observations: Sip01Observation[];
   /** Distinct d tags (unique documents). */
@@ -109,6 +140,8 @@ export interface IndexStats {
   docTypes: { name: string; count: number }[];
   /** Leaderboard of indexers. */
   indexers: IndexerStat[];
+  /** Observation-layer stats per publisher software family (source tag). */
+  families: SourceFamilyStat[];
   /** Per-relay provenance for the current window. */
   relayCoverage: RelayCoverage[];
   /** Heartbeat network view (kind 16919), latest per node. */
@@ -209,6 +242,10 @@ export function useIndexStats() {
       const docs = new Set(observations.map((o) => o.d));
       const hostSet = new Set(observations.map((o) => o.host));
       const indexerMap = new Map<string, IndexerStat>();
+      const familyMap = new Map<
+        SourceFamilyStat['family'],
+        { observations: number; indexers: Set<string>; docs: Set<string>; lastSeen: number; sources: Set<string> }
+      >();
 
       const topicCount = new Map<string, number>();
       const hostCount = new Map<string, number>();
@@ -238,6 +275,21 @@ export function useIndexStats() {
           sources: [...new Set([...(prev?.sources ?? []), ...(o.source ? [o.source] : [])])],
           networks: [...new Set([...(prev?.networks ?? []), ...(o.extensions.network ? [o.extensions.network] : [])])],
         });
+
+        const famKey = sourceFamily(o.source);
+        const fam = familyMap.get(famKey) ?? {
+          observations: 0,
+          indexers: new Set<string>(),
+          docs: new Set<string>(),
+          lastSeen: 0,
+          sources: new Set<string>(),
+        };
+        fam.observations += 1;
+        fam.indexers.add(o.indexer);
+        fam.docs.add(o.d);
+        fam.lastSeen = Math.max(fam.lastSeen, o.observedAt);
+        if (o.source) fam.sources.add(o.source);
+        familyMap.set(famKey, fam);
       }
 
       // documents per indexer
@@ -257,6 +309,23 @@ export function useIndexStats() {
 
       const perDay = [...dayCount.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([day, count]) => ({ day, count }));
 
+      // Both ecosystem families are always reported (even at 0) so the
+      // dashboard can show "stats from both"; 'other' only when present.
+      const families: SourceFamilyStat[] = (['crawlstr', 'indexstr', 'other'] as const)
+        .filter((fam) => fam !== 'other' || familyMap.has('other'))
+        .map((fam) => {
+          const f = familyMap.get(fam);
+          return {
+            family: fam,
+            label: FAMILY_LABELS[fam],
+            observations: f?.observations ?? 0,
+            indexers: f?.indexers.size ?? 0,
+            documents: f?.docs.size ?? 0,
+            lastSeen: f?.lastSeen ?? 0,
+            sources: f ? [...f.sources].sort() : [],
+          };
+        });
+
       const stats: Omit<IndexStats, 'validityRate'> = {
         observations,
         documents: docs.size,
@@ -270,6 +339,7 @@ export function useIndexStats() {
         networks: topOf(networkCount, 6),
         docTypes: topOf(typeCount, 6),
         indexers: [...indexerMap.values()].sort((a, b) => b.observations - a.observations).slice(0, 20),
+        families,
         relayCoverage,
         heartbeats,
         liveNodes,

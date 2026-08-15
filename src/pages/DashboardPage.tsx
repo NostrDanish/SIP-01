@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom';
 import {
   Activity,
   BatteryCharging,
+  Boxes,
+  Compass,
   Database,
   FileText,
   Globe,
   HeartPulse,
+  Network,
   RefreshCw,
   ShieldCheck,
   Tags,
@@ -29,7 +32,7 @@ import { C, Callout, Pill } from '@/components/doc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useIndexStats, type IndexerStat, type RelayCoverage } from '@/hooks/useIndexStats';
+import { useIndexStats, type IndexerStat, type RelayCoverage, type SourceFamilyStat } from '@/hooks/useIndexStats';
 import { OBSERVATION_RELAYS } from '@/lib/sip01';
 import { HEARTBEAT_TTL_S, SHARD_COUNT } from '@/lib/heartbeat';
 import { useSeoMeta } from '@/lib/seo';
@@ -213,6 +216,67 @@ function RelayCoverageCard({ coverage, loading }: { coverage: RelayCoverage[]; l
   );
 }
 
+const FAMILY_META: Record<SourceFamilyStat['family'], { icon: React.ElementType; blurb: string; href: string }> = {
+  crawlstr: {
+    icon: Compass,
+    blurb: 'Lightweight scouts — human-directed & random discovery from any browser.',
+    href: 'https://github.com/NostrDanish/Crwalstr',
+  },
+  indexstr: {
+    icon: Network,
+    blurb: 'Heavyweight distributed indexer — curated collections sharded across nodes.',
+    href: 'https://github.com/NostrDanish/indexstr',
+  },
+  other: {
+    icon: Boxes,
+    blurb: 'Everything else publishing kind 39697 — autosigners, engines, new software.',
+    href: 'https://github.com/NostrDanish/SIP-01',
+  },
+};
+
+function FamilyCard({ stat, liveNodes, loading }: { stat: SourceFamilyStat; liveNodes?: number; loading?: boolean }) {
+  const meta = FAMILY_META[stat.family];
+  const Icon = meta.icon;
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-1.5">
+          <a
+            href={meta.href}
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-sm hover:text-primary transition-colors"
+          >
+            {stat.label}
+          </a>
+          <Icon className="size-4 text-primary" aria-hidden />
+        </div>
+        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">{meta.blurb}</p>
+        {loading ? (
+          <Skeleton className="h-8 w-24" />
+        ) : (
+          <>
+            <div className="text-3xl font-bold font-mono tracking-tight">
+              {stat.observations.toLocaleString()}
+              <span className="text-sm font-normal text-muted-foreground ml-2">observations</span>
+            </div>
+            <div className="text-xs text-muted-foreground mt-2 font-mono">
+              {stat.indexers} indexer{stat.indexers === 1 ? '' : 's'} · {stat.documents.toLocaleString()} docs
+              {stat.lastSeen > 0 && <> · last {new Date(stat.lastSeen * 1000).toLocaleString()}</>}
+            </div>
+            <div className="text-[11px] text-muted-foreground mt-1.5 font-mono">
+              {stat.sources.length > 0 ? stat.sources.join(', ') : 'no observations in window'}
+              {stat.family === 'indexstr' && liveNodes !== undefined && (
+                <> · <span className="text-emerald-500">{liveNodes} node{liveNodes === 1 ? '' : 's'} live</span> (heartbeats)</>
+              )}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 
 export default function DashboardPage() {
@@ -283,6 +347,19 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Per-software stats — both sides of the publisher layer */}
+        <div className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <Users className="size-3.5" /> Publisher software — the crawler and the indexer network
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 mb-8">
+          {(data?.families ?? [
+            { family: 'crawlstr', label: 'Crawlstr scouts', observations: 0, indexers: 0, documents: 0, lastSeen: 0, sources: [] },
+            { family: 'indexstr', label: 'indexstr network', observations: 0, indexers: 0, documents: 0, lastSeen: 0, sources: [] },
+          ] satisfies SourceFamilyStat[]).map((fam) => (
+            <FamilyCard key={fam.family} stat={fam} liveNodes={data?.liveNodes.length} loading={isLoading} />
+          ))}
+        </div>
 
         {/* Per-relay provenance */}
         <RelayCoverageCard coverage={data?.relayCoverage ?? []} loading={isLoading} />

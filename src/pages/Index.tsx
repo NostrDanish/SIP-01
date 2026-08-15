@@ -55,7 +55,7 @@ const PRINCIPLES = [
 ];
 
 const PIPELINE = [
-  { icon: Bot, name: 'Crawlers', desc: 'Crwalstr & friends observe pages and sign observations', href: 'https://github.com/NostrDanish/Crwalstr' },
+  { icon: Bot, name: 'Crawlers', desc: 'Crwalstr scouts & indexstr nodes observe pages and sign observations', href: 'https://github.com/NostrDanish/Crwalstr' },
   { icon: FileJson2, name: 'kind 39697', desc: 'One addressable event per (indexer, normalized URL)' },
   { icon: Server, name: 'Index relays', desc: 'Validate, dedupe, index, and federate via NIP-77', href: 'https://github.com/NostrDanish/UNCAGED-Index-Relay' },
   { icon: Search, name: 'Search engines', desc: 'Group by d, count indexers, rank however they want', href: 'https://github.com/NostrDanish/UNCAGED-ENGINE' },

@@ -62,7 +62,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </span>
             <Button variant="ghost" size="icon" asChild>
               <a
-                href="https://github.com/NostrDanish/0xSearchstr/blob/main/docs/SEARCH_INDEX_PROTOCOL.md"
+                href="https://github.com/NostrDanish/SIP-01"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="SIP-01 on GitHub"
@@ -144,6 +144,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <ul className="space-y-2 text-muted-foreground">
               <li><a className="hover:text-primary transition-colors" href="https://github.com/NostrDanish/UNCAGED-Index-Relay" target="_blank" rel="noreferrer">UNCAGED Index Relay</a></li>
               <li><a className="hover:text-primary transition-colors" href="https://github.com/NostrDanish/Crwalstr" target="_blank" rel="noreferrer">Crwalstr crawler</a></li>
+              <li><a className="hover:text-primary transition-colors" href="https://github.com/NostrDanish/indexstr" target="_blank" rel="noreferrer">indexstr network</a></li>
               <li><a className="hover:text-primary transition-colors" href="https://github.com/NostrDanish/UNCAGED-ENGINE" target="_blank" rel="noreferrer">UNCAGED-ENGINE</a></li>
               <li><a className="hover:text-primary transition-colors" href="https://github.com/NostrDanish/0xSearchstr" target="_blank" rel="noreferrer">0xSearchstr</a></li>
               <li><a className="hover:text-primary transition-colors" href="https://github.com/NostrDanish/0xPresearchstr" target="_blank" rel="noreferrer">0xPresearchstr</a></li>
