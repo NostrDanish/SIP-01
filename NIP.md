@@ -45,14 +45,15 @@ All events carry an `alt` tag with a human-readable description
 - **/audit** — the cross-implementation fact-check / bug-check report.
 - **/explorer** — live kind 39697 explorer with a client-side validator and a
   URL → `d`-tag calculator implementing SIP-01 §7/§8 byte-compatibly.
-- **/settings** — relay settings: the visitor's own NIP-65 relay list (stored
-  locally, published as kind 10002 when logged in), merged on top of the
-  always-on ecosystem read set.
+- **/settings** — the app relay list: every relay the dashboard and explorer
+  read from. Fully editable (add/remove/disable) with a reset button that
+  restores the shipped defaults. Stored locally, never published to Nostr,
+  and deliberately NOT synced from the visitor's NIP-65 list.
 
-The dashboard and explorer read from the union of the known crawler publish
-pools (Crawlstr + indexstr), the NIP-50 search relays, and the user's own
-configured relays — kind 39697 lives on any relay, and the dashboard's
-per-relay coverage panel shows exactly where each window of data came from.
+The default read set is the union of the known crawler publish pools
+(Crawlstr + indexstr), the NIP-50 search relays, and a general fallback —
+kind 39697 lives on any relay, and the dashboard's per-relay coverage panel
+shows exactly where each window of data came from.
 
 ## Reference implementations (cross-checked by the audit)
 

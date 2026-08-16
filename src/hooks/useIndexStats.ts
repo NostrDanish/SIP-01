@@ -6,11 +6,11 @@
  * (or kind 16919 heartbeats) appears on the dashboard automatically, which is
  * the point: Crwalstr, indexstr, and every future indexer share one pool.
  *
- * Reads fan out per relay over OBSERVATION_RELAYS — the union of the known
- * crawler publish pools (Crawlstr + indexstr) and the NIP-50 search relays —
- * plus the user's own relay pool. Kind 39697 lives on ANY relay (the index
- * relay is just a relay with extra validation/search), so the dashboard reads
- * the widest set we know and reports per-relay coverage alongside the stats.
+ * Reads fan out per relay over the app relay list (AppContext `relayMetadata`,
+ * editable in /settings; default = the union of the known crawler publish
+ * pools and the NIP-50 search relays). Kind 39697 lives on ANY relay — the
+ * index relay is just a relay with extra validation/search — so the dashboard
+ * reports per-relay coverage alongside the stats.
  */
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
@@ -18,7 +18,6 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useAppContext } from '@/hooks/useAppContext';
 import { SIP01 } from '@/lib/sip01';
-import { OBSERVATION_RELAYS } from '@/lib/sip01';
 import { parseSip01Event, validateSip01Event, type Sip01Observation } from '@/lib/sip01-utils';
 import {
   dedupeHeartbeats,
@@ -74,10 +73,8 @@ export interface IndexerStat {
 
 /** Per-relay read result — the dashboard's provenance panel. */
 export interface RelayCoverage {
-  /** Relay URL, or a label for the user's own relay pool. */
+  /** Relay URL from the app relay list. */
   url: string;
-  /** True for the user's configured relay pool entry. */
-  isPool: boolean;
   /** Kind 39697 events this relay returned (before cross-relay dedup). */
   observations: number;
   /** Kind 16919 heartbeats this relay returned. */
@@ -161,18 +158,19 @@ export interface IndexStats {
 export function useIndexStats() {
   const { nostr } = useNostr();
   const { config } = useAppContext();
-  // Re-read when the user edits their relay list (relay settings page).
-  const poolKey = config.relayMetadata.relays.map((r) => `${r.url}:${r.read ? 'r' : ''}`).join(',');
+  // The app relay list (editable in /settings). Re-reads when it changes.
+  const readRelays = config.relayMetadata.relays.filter((r) => r.read).map((r) => r.url);
+  const relayKey = readRelays.join(',');
 
   const query = useQuery({
-    queryKey: ['sip01-index-stats-v1', poolKey],
+    queryKey: ['sip01-index-stats-v1', relayKey],
     queryFn: async (c) => {
       /* Fan out per relay so we can report exactly where the data lives.
          NRelay1 auto-closes idle connections (30s), so per-run handles are
          safe; each relay gets its own timeout so one slow relay can't stall
          the page. */
       const perRelay = await Promise.allSettled(
-        OBSERVATION_RELAYS.map(async (url) => {
+        readRelays.map(async (url) => {
           const relay = nostr.relay(url);
           const signal = AbortSignal.any([c.signal, AbortSignal.timeout(RELAY_TIMEOUT_MS)]);
           const events = await fetchObservationWindow((f, o) => relay.query(f as never, o), signal);
@@ -189,31 +187,15 @@ export function useIndexStats() {
         }),
       );
 
-      // The user's own NIP-65 pool, same treatment.
-      const poolSignal = AbortSignal.any([c.signal, AbortSignal.timeout(RELAY_TIMEOUT_MS)]);
-      const poolResult: {
-        events: NostrEvent[];
-        heartbeats: NostrEvent[];
-        timedOut: boolean;
-      } = { events: [], heartbeats: [], timedOut: false };
-      try {
-        poolResult.events = await fetchObservationWindow((f, o) => nostr.query(f as never, o), poolSignal);
-        poolResult.heartbeats = await nostr.query([{ kinds: [HEARTBEAT_KIND], limit: 500 }], { signal: poolSignal });
-        poolResult.timedOut = poolSignal.aborted && !c.signal.aborted;
-      } catch {
-        poolResult.timedOut = poolSignal.aborted && !c.signal.aborted;
-      }
-
       const relayCoverage: RelayCoverage[] = [];
       const obsEvents: NostrEvent[] = [];
       const hbEvents: NostrEvent[] = [];
 
       for (const [i, r] of perRelay.entries()) {
-        const url = OBSERVATION_RELAYS[i];
+        const url = readRelays[i];
         if (r.status === 'fulfilled') {
           relayCoverage.push({
             url,
-            isPool: false,
             observations: r.value.events.length,
             heartbeats: r.value.heartbeats.length,
             status: r.value.status,
@@ -221,19 +203,9 @@ export function useIndexStats() {
           obsEvents.push(...r.value.events);
           hbEvents.push(...r.value.heartbeats);
         } else {
-          relayCoverage.push({ url, isPool: false, observations: 0, heartbeats: 0, status: 'failed' });
+          relayCoverage.push({ url, observations: 0, heartbeats: 0, status: 'failed' });
         }
       }
-      const poolGotData = poolResult.events.length + poolResult.heartbeats.length > 0;
-      relayCoverage.push({
-        url: 'your relay pool',
-        isPool: true,
-        observations: poolResult.events.length,
-        heartbeats: poolResult.heartbeats.length,
-        status: poolGotData ? (poolResult.timedOut ? 'partial' : 'ok') : poolResult.timedOut ? 'failed' : 'ok',
-      });
-      obsEvents.push(...poolResult.events);
-      hbEvents.push(...poolResult.heartbeats);
 
       const byId = new Map(obsEvents.map((e) => [e.id, e]));
       const observations = [...byId.values()]

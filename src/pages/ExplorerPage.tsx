@@ -30,7 +30,7 @@ import {
   validateSip01Event,
   type Sip01Observation,
 } from '@/lib/sip01-utils';
-import { OBSERVATION_RELAYS, D_VECTORS, SIP01 } from '@/lib/sip01';
+import { D_VECTORS, SIP01 } from '@/lib/sip01';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useSeoMeta } from '@/lib/seo';
 import { cn } from '@/lib/utils';
@@ -43,25 +43,20 @@ import { sanitizeUrl } from '@/lib/sanitizeUrl';
 function useObservations(topic: string) {
   const { nostr } = useNostr();
   const { config } = useAppContext();
-  // Re-read when the user edits their relay list (relay settings page).
-  const poolKey = config.relayMetadata.relays.map((r) => `${r.url}:${r.read ? 'r' : ''}`).join(',');
+  // The app relay list (editable in /settings) — re-read when it changes.
+  const readRelays = config.relayMetadata.relays.filter((r) => r.read).map((r) => r.url);
+  const relayKey = readRelays.join(',');
   return useQuery({
-    queryKey: ['sip01-explorer', topic, poolKey],
+    queryKey: ['sip01-explorer', topic, relayKey],
     queryFn: async (c) => {
-      // Read the union of the known crawler publish pools + NIP-50 search
-      // relays (kind 39697 lives on any relay), plus the user's own pool.
-      const group = nostr.group(OBSERVATION_RELAYS);
+      if (readRelays.length === 0) return [];
+      const group = nostr.group(readRelays);
       const filter = topic
         ? { kinds: [SIP01.kind], '#t': [topic], limit: 60 }
         : { kinds: [SIP01.kind], limit: 60 };
-      const [groupEvents, poolEvents] = await Promise.allSettled([
-        group.query([filter], { signal: AbortSignal.any([c.signal, AbortSignal.timeout(12_000)]) }),
-        nostr.query([filter], { signal: AbortSignal.any([c.signal, AbortSignal.timeout(12_000)]) }),
-      ]);
-      const all = [
-        ...(groupEvents.status === 'fulfilled' ? groupEvents.value : []),
-        ...(poolEvents.status === 'fulfilled' ? poolEvents.value : []),
-      ];
+      const all = await group
+        .query([filter], { signal: AbortSignal.any([c.signal, AbortSignal.timeout(12_000)]) })
+        .catch(() => [] as NostrEvent[]);
       const byId = new Map(all.map((e) => [e.id, e]));
       return [...byId.values()].sort((a, b) => b.created_at - a.created_at);
     },
@@ -280,6 +275,8 @@ export default function ExplorerPage() {
   const [grouped, setGrouped] = useState(false);
   const { data: events, isLoading, refetch, isFetching } = useObservations(topic);
   const validations = useValidations(events);
+  const { config } = useAppContext();
+  const readRelays = config.relayMetadata.relays.filter((r) => r.read).map((r) => r.url);
 
   const observations = useMemo(
     () => (events ?? []).map(parseSip01Event).filter((o): o is Sip01Observation => o !== null),
@@ -399,10 +396,17 @@ export default function ExplorerPage() {
             ) : observations.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-12 px-8 text-center">
-                  <p className="text-muted-foreground max-w-sm mx-auto">
-                    No observations found{topic ? ` for topic "${topic}"` : ''} on the queried relays. The index
-                    grows as crawlers run — try another topic or check back later.
-                  </p>
+                  {readRelays.length === 0 ? (
+                    <p className="text-muted-foreground max-w-sm mx-auto">
+                      No relays enabled. Add one or reset to the defaults in{' '}
+                      <a href="/settings" className="text-primary hover:underline">relay settings</a>.
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground max-w-sm mx-auto">
+                      No observations found{topic ? ` for topic "${topic}"` : ''} on your app relays. The index
+                      grows as crawlers run — try another topic or check back later.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ) : grouped ? (
@@ -432,8 +436,10 @@ export default function ExplorerPage() {
             )}
 
             <p className="text-xs text-muted-foreground mt-8 font-mono">
-              sources: {OBSERVATION_RELAYS.map((r) => r.replace('wss://', '').replace(/\/$/, '')).join(' · ')} +
-              your configured relays
+              sources: {readRelays.length} relays from{' '}
+              <a href="/settings" className="text-primary hover:underline">your app relay list</a>
+              {' · '}
+              {readRelays.map((r) => r.replace('wss://', '').replace(/\/$/, '')).join(' · ')}
             </p>
           </div>
 

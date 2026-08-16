@@ -67,12 +67,12 @@ Every hash in this README is real and reproducible — see
 | **[`public/spec/SIP-01.md`](public/spec/SIP-01.md)** | The full, submission-ready specification (v1.2), incl. the §20.1 NIP dependency table |
 | **[`docs/IMPLEMENTATION-GUIDE.md`](docs/IMPLEMENTATION-GUIDE.md)** | Integration guide: publish, consume, or relay the index |
 | **[`NIP.md`](NIP.md)** | Schema summary (repo convention) |
-| Site `/dashboard` | Live public index stats — observations, documents, indexers, per-software family cards (Crawlstr / indexstr), crawler heartbeats (both), per-relay coverage (reads the union of the Crawlstr + indexstr publish pools, the NIP-50 search relays, and your own) |
+| Site `/dashboard` | Live public index stats — observations, documents, indexers, per-software family cards (Crawlstr / indexstr), crawler heartbeats (both), per-relay coverage (reads the app relay list — default: the union of the Crawlstr + indexstr publish pools, the NIP-50 search relays, and a general fallback) |
 | Site `/registry` | Core + extension tag registry and the extension process |
 | Site `/query` | Query reference: NIP-01 filters, NIP-50 operators, NIP-11, NIP-77 |
 | Site `/audit` | Cross-implementation fact-check & bug report (v1 → v1.1) |
 | Site `/explorer` | Live kind 39697 explorer + client-side validator + d-tag calculator |
-| Site `/settings` | Relay settings — the visitor's NIP-65 relay list, merged on top of the ecosystem read set |
+| Site `/settings` | Relay settings — the app relay list (default: the full ecosystem read set), fully editable with a reset button; local-only, never published |
 
 ## Modular by design
 

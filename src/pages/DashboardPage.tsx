@@ -33,7 +33,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIndexStats, type IndexerStat, type RelayCoverage, type SourceFamilyStat } from '@/hooks/useIndexStats';
-import { OBSERVATION_RELAYS } from '@/lib/sip01';
 import { HEARTBEAT_TTL_S, SHARD_COUNT } from '@/lib/heartbeat';
 import { useSeoMeta } from '@/lib/seo';
 import { cn } from '@/lib/utils';
@@ -175,6 +174,11 @@ function RelayCoverageCard({ coverage, loading }: { coverage: RelayCoverage[]; l
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
           </div>
+        ) : coverage.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">
+            No relays enabled. Add one or reset to the defaults in{' '}
+            <Link to="/settings" className="text-primary hover:underline">relay settings</Link>.
+          </p>
         ) : (
           <>
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -187,14 +191,8 @@ function RelayCoverageCard({ coverage, loading }: { coverage: RelayCoverage[]; l
                     className={cn('size-2 rounded-full shrink-0', COVERAGE_DOT[r.status])}
                     title={r.status === 'ok' ? 'answered' : r.status === 'partial' ? 'answered, hit read timeout' : 'unreachable'}
                   />
-                  <span className="font-mono text-xs truncate min-w-0 flex-1" title={r.isPool ? undefined : r.url}>
-                    {r.isPool ? (
-                      <Link to="/settings" className="hover:text-primary underline decoration-dotted underline-offset-2 transition-colors" title="Edit your relay list">
-                        {r.url}
-                      </Link>
-                    ) : (
-                      relayHost(r.url)
-                    )}
+                  <span className="font-mono text-xs truncate min-w-0 flex-1" title={r.url}>
+                    {relayHost(r.url)}
                   </span>
                   <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
                     {r.status === 'failed' ? (
@@ -212,8 +210,10 @@ function RelayCoverageCard({ coverage, loading }: { coverage: RelayCoverage[]; l
             <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
               <strong className="text-foreground">Any relay can host kind 39697.</strong> The UNCAGED index relay
               is just a relay with extra SIP-01 validation and NIP-50 search operators — the data is not tied to
-              it. This page reads the union of the known crawler publish pools (Crawlstr + indexstr), the NIP-50
-              search relays, and your own configured relays. Counts are per-relay, before cross-relay dedup.
+              it. These rows are your{' '}
+              <Link to="/settings" className="text-primary hover:underline">app relay list</Link> (default: the
+              union of the known crawler publish pools and the NIP-50 search relays) — counts are per-relay,
+              before cross-relay dedup.
             </p>
           </>
         )}
@@ -312,7 +312,8 @@ export default function DashboardPage() {
               Public statistics for the shared SIP-01 index, computed entirely from relay data in your browser.
               No indexer registry, no coordinator — <strong className="text-foreground">anyone publishing kind
               39697 to any relay lands here by default</strong>: Crwalstr, indexstr, autosigners, or anything
-              new. We read every relay the crawlers publish to, plus yours.
+              new. The read set is your app relay list — every relay the crawlers publish to, editable in{' '}
+              <Link to="/settings" className="text-primary hover:underline">settings</Link>.
             </p>
           </div>
           <Button variant="outline" onClick={() => refetch()} disabled={isFetching} className="gap-2 shrink-0">
@@ -588,11 +589,11 @@ export default function DashboardPage() {
             while running. Engines and autosigners typically publish observations only.
           </Callout>
           <Callout kind="info" title="Where the numbers come from">
-            Read live in your browser from {OBSERVATION_RELAYS.length} relays — the union of the Crawlstr and
-            indexstr publish pools and the NIP-50 search relays — plus your configured relays, which you can
-            change anytime in <Link to="/settings" className="text-primary hover:underline">relay settings</Link>.
-            See the coverage panel above for per-relay detail. Auto-refreshes every 60s. Browse individual
-            observations in the{' '}
+            Read live in your browser from your app relay list ({data?.relayCoverage.length ?? 0} relays) —
+            the default is the union of the Crawlstr and indexstr publish pools and the NIP-50 search relays,
+            and you can change it anytime in{' '}
+            <Link to="/settings" className="text-primary hover:underline">relay settings</Link>. See the coverage
+            panel above for per-relay detail. Auto-refreshes every 60s. Browse individual observations in the{' '}
             <Link to="/explorer" className="text-primary hover:underline">explorer</Link>.
           </Callout>
         </div>

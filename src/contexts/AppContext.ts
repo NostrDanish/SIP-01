@@ -3,7 +3,12 @@ import { createContext } from "react";
 export type Theme = "dark" | "light" | "system";
 
 export interface RelayMetadata {
-  /** List of relays with read/write permissions */
+  /**
+   * The app relay list — every relay this site reads from. Owned by the
+   * visitor (editable in /settings), NOT synced from any NIP-65 list.
+   * `read` = enabled for reads; `write` is unused (this site publishes
+   * nothing) and kept only for template type compatibility.
+   */
   relays: { url: string; read: boolean; write: boolean }[];
   /** Unix timestamp of when the relay list was last updated */
   updatedAt: number;

@@ -1,18 +1,22 @@
 import type { RelayMetadata } from '@/contexts/AppContext';
+import { OBSERVATION_RELAYS } from '@/lib/sip01';
 
 /**
- * App default relays. Used as the initial `relayMetadata` for new users and as
- * a fallback when the user has no NIP-65 relay list configured (e.g. during
- * nostrconnect handshakes before any user relays have been loaded).
+ * The app relay list — every relay this site reads the SIP-01 index from.
+ *
+ * The default is the full ecosystem read set: the union of the known crawler
+ * publish pools (Crawlstr + indexstr) and the NIP-50 search relays, plus
+ * relay.dreamith.to. Visitors can freely edit the list in /settings (it is
+ * stored locally, never published to Nostr) and reset back to these defaults.
+ *
+ * `write` is false throughout: this site is read-only and publishes nothing.
+ * The flag only exists because RelayMetadata is the shared template type.
  */
 export const APP_RELAYS: RelayMetadata = {
-  relays: [
-    { url: 'wss://relay.ditto.pub/', read: true, write: true },
-    { url: 'wss://relay.dreamith.to/', read: true, write: true },
-    // This site is read-heavy (dashboard + explorer): primal and nos.lol are
-    // also crawler publish targets, so they default to readable here.
-    { url: 'wss://relay.primal.net/', read: true, write: true },
-    { url: 'wss://nos.lol/', read: true, write: true },
-  ],
+  relays: [...OBSERVATION_RELAYS, 'wss://relay.dreamith.to/'].map((url) => ({
+    url,
+    read: true,
+    write: false,
+  })),
   updatedAt: 0,
 };
