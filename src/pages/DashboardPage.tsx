@@ -266,8 +266,8 @@ function FamilyCard({ stat, liveNodes, loading }: { stat: SourceFamilyStat; live
             </div>
             <div className="text-[11px] text-muted-foreground mt-1.5 font-mono">
               {stat.sources.length > 0 ? stat.sources.join(', ') : 'no observations in window'}
-              {stat.family === 'indexstr' && liveNodes !== undefined && (
-                <> · <span className="text-emerald-500">{liveNodes} node{liveNodes === 1 ? '' : 's'} live</span> (heartbeats)</>
+              {stat.family !== 'other' && liveNodes !== undefined && (
+                <> · <span className="text-emerald-500">{liveNodes} live</span> (heartbeats)</>
               )}
             </div>
           </>
@@ -357,7 +357,12 @@ export default function DashboardPage() {
             { family: 'crawlstr', label: 'Crawlstr scouts', observations: 0, indexers: 0, documents: 0, lastSeen: 0, sources: [] },
             { family: 'indexstr', label: 'indexstr network', observations: 0, indexers: 0, documents: 0, lastSeen: 0, sources: [] },
           ] satisfies SourceFamilyStat[]).map((fam) => (
-            <FamilyCard key={fam.family} stat={fam} liveNodes={data?.liveNodes.length} loading={isLoading} />
+            <FamilyCard
+              key={fam.family}
+              stat={fam}
+              liveNodes={fam.family === 'other' ? undefined : data?.liveByFamily[fam.family]}
+              loading={isLoading}
+            />
           ))}
         </div>
 
@@ -428,9 +433,9 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted-foreground">
-                Crawler network — indexstr node heartbeats
+                Crawler network — node heartbeats
               </CardTitle>
-              <Pill tone="opt">kind 16919 · indexstr nodes · self-reported</Pill>
+              <Pill tone="opt">kind 16919 · crawlstr + indexstr · self-reported</Pill>
             </div>
           </CardHeader>
           <CardContent>
@@ -438,9 +443,10 @@ export default function DashboardPage() {
               <Skeleton className="h-32 w-full" />
             ) : (data?.heartbeats.length ?? 0) === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center max-w-xl mx-auto">
-                No indexstr heartbeats in range right now. Nodes publish one every 10 minutes while crawling.
-                SIP-01 publishers that don't run indexstr never appear in this panel — their signed kind 39697
-                observations land in the indexer leaderboard below instead.
+                No crawler heartbeats in range right now. Crawlstr scouts and indexstr nodes publish one on
+                start and every 10 minutes while running. SIP-01 publishers that don't emit heartbeats never
+                appear in this panel — their signed kind 39697 observations land in the indexer leaderboard
+                below instead.
               </p>
             ) : (
               <>
@@ -448,7 +454,11 @@ export default function DashboardPage() {
                   <div className="rounded-lg border border-border p-4">
                     <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Active nodes</div>
                     <div className="text-2xl font-bold font-mono">{data!.liveNodes.length}</div>
-                    <div className="text-xs text-muted-foreground">{data!.heartbeats.length} total seen</div>
+                    <div className="text-xs text-muted-foreground">
+                      {data!.liveByFamily.crawlstr} crawlstr · {data!.liveByFamily.indexstr} indexstr
+                      {data!.liveByFamily.unknown > 0 && ` · ${data!.liveByFamily.unknown} other`} ·{' '}
+                      {data!.heartbeats.length} total seen
+                    </div>
                   </div>
                   <div className="rounded-lg border border-border p-4">
                     <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Shard coverage</div>
@@ -482,6 +492,18 @@ export default function DashboardPage() {
                       >
                         <span className={cn('size-2 rounded-full shrink-0', live ? 'bg-emerald-500' : 'bg-muted-foreground/40')} aria-label={live ? 'online' : 'offline'} />
                         <span className="font-mono text-xs text-primary">{hb.pubkey.slice(0, 12)}…</span>
+                        <span
+                          className={cn(
+                            'font-mono text-[11px] rounded px-1.5 py-0.5 border',
+                            hb.source?.startsWith('crawlstr')
+                              ? 'bg-sky-500/10 text-sky-500 border-sky-500/30'
+                              : hb.source?.startsWith('indexstr')
+                                ? 'bg-primary/10 text-primary border-primary/25'
+                                : 'bg-accent text-accent-foreground border-border/60',
+                          )}
+                        >
+                          {hb.source ?? 'unknown'}
+                        </span>
                         <span className="font-mono text-[11px] bg-accent text-accent-foreground rounded px-1.5 py-0.5 border border-border/60">
                           shard {hb.shard}
                         </span>
@@ -498,7 +520,8 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
                   Heartbeats are <strong className="text-foreground">self-reported and unverified</strong> — they
                   describe coverage and health, never reputation. Reputation derives only from signed kind 39697
-                  observations below.
+                  observations below. Both crawler families compute the same home shard (first byte of the
+                  indexer pubkey); indexstr nodes also schedule work by it, Crawlstr scouts just report it.
                 </p>
               </>
             )}
@@ -554,9 +577,9 @@ export default function DashboardPage() {
             <strong className="text-foreground">Kind 39697 observations are the index</strong> — anyone who
             publishes them is an indexer and lands on the leaderboard automatically; optionally add a{' '}
             <C>source</C> tag like <C>mycrawler/1</C>.{' '}
-            <strong className="text-foreground">Kind 16919 heartbeats are the indexstr crawler network's
-            health layer</strong> — self-reported coverage from nodes running the indexstr sharding scheme.
-            Crawlstr, autosigners, and engines publish observations only.
+            <strong className="text-foreground">Kind 16919 heartbeats are the crawler network's shared health
+            layer</strong> — published by both Crawlstr scouts and indexstr nodes on start and every 10 minutes
+            while running. Engines and autosigners typically publish observations only.
           </Callout>
           <Callout kind="info" title="Where the numbers come from">
             Read live in your browser from {OBSERVATION_RELAYS.length} relays — the union of the Crawlstr and
@@ -578,7 +601,7 @@ export default function DashboardPage() {
           <Tags className="size-3.5" />
           <span>
             spec: <Link to="/spec" className="text-primary hover:underline">SIP-01 v1.2</Link> · kind 16919
-            heartbeats: indexstr crawler nodes · any relay can host kind 39697
+            heartbeats: crawlstr scouts + indexstr nodes · any relay can host kind 39697
           </span>
         </div>
       </div>

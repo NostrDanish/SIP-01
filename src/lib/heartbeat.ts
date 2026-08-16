@@ -1,15 +1,17 @@
 /**
- * Indexstr node heartbeats — kind 16919 (replaceable).
+ * Crawler network heartbeats — kind 16919 (replaceable).
  *
- * Crawler nodes publish a small signed heartbeat so the network can answer
- * "who is indexing right now?" without any coordinator. One replaceable event
- * per node; the latest write wins.
+ * Shared by BOTH crawler families: indexstr nodes (which schedule work by
+ * shard) and Crawlstr scouts (which report only a home shard). One
+ * replaceable event per node; the latest write wins. The `source` tag
+ * (`indexstr/1` / `crawlstr/1`) distinguishes the software.
  *
  * Heartbeats are SELF-REPORTED and unverified — useful for coverage/health
  * estimates, never as a reputation input. Reputation derives from signed
  * kind 39697 observations.
  *
- * Schema ported from indexstr src/crawler/heartbeat.ts.
+ * Schema ported from indexstr src/crawler/heartbeat.ts (which is itself
+ * aligned with this file; Crawlstr emits the same shape).
  */
 import type { NostrEvent } from '@nostrify/nostrify';
 
@@ -84,4 +86,15 @@ export function dedupeHeartbeats(events: NostrEvent[]): ParsedHeartbeat[] {
 /** True when the heartbeat is fresh enough to count the node as online. */
 export function isNodeLive(hb: ParsedHeartbeat, now = Math.floor(Date.now() / 1000)): boolean {
   return now - hb.createdAt <= HEARTBEAT_TTL_S;
+}
+
+/** Crawler software family, from the heartbeat's `source` tag. */
+export type HeartbeatFamily = 'crawlstr' | 'indexstr' | 'unknown';
+
+/** Classify a heartbeat by its `source` tag (`crawlstr/1`, `indexstr/1`, …). */
+export function heartbeatFamily(source: string | undefined): HeartbeatFamily {
+  const s = (source ?? '').toLowerCase();
+  if (s.startsWith('crawlstr')) return 'crawlstr';
+  if (s.startsWith('indexstr')) return 'indexstr';
+  return 'unknown';
 }

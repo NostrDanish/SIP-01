@@ -21,8 +21,10 @@ import { OBSERVATION_RELAYS } from '@/lib/sip01';
 import { parseSip01Event, validateSip01Event, type Sip01Observation } from '@/lib/sip01-utils';
 import {
   dedupeHeartbeats,
+  heartbeatFamily,
   isNodeLive,
   HEARTBEAT_KIND,
+  type HeartbeatFamily,
   type ParsedHeartbeat,
 } from '@/lib/heartbeat';
 
@@ -147,6 +149,8 @@ export interface IndexStats {
   /** Heartbeat network view (kind 16919), latest per node. */
   heartbeats: ParsedHeartbeat[];
   liveNodes: ParsedHeartbeat[];
+  /** Live-node count per crawler software family (crawlstr / indexstr / unknown). */
+  liveByFamily: Record<HeartbeatFamily, number>;
   shardsCovered: number;
   selfReported: { pagesIndexed: number; published: number; queueSize: number };
   /** True when any events were found at all. */
@@ -237,6 +241,8 @@ export function useIndexStats() {
       const heartbeats = dedupeHeartbeats([...hbById.values()]);
       const now = Math.floor(Date.now() / 1000);
       const liveNodes = heartbeats.filter((hb) => isNodeLive(hb, now));
+      const liveByFamily: Record<HeartbeatFamily, number> = { crawlstr: 0, indexstr: 0, unknown: 0 };
+      for (const hb of liveNodes) liveByFamily[heartbeatFamily(hb.source)] += 1;
 
       /* ---- aggregates ---- */
       const docs = new Set(observations.map((o) => o.d));
@@ -343,6 +349,7 @@ export function useIndexStats() {
         relayCoverage,
         heartbeats,
         liveNodes,
+        liveByFamily,
         shardsCovered: new Set(liveNodes.map((hb) => hb.shard)).size,
         selfReported: liveNodes.reduce(
           (acc, hb) => ({
