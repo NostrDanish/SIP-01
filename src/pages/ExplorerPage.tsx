@@ -31,6 +31,7 @@ import {
   type Sip01Observation,
 } from '@/lib/sip01-utils';
 import { OBSERVATION_RELAYS, D_VECTORS, SIP01 } from '@/lib/sip01';
+import { useAppContext } from '@/hooks/useAppContext';
 import { useSeoMeta } from '@/lib/seo';
 import { cn } from '@/lib/utils';
 import { sanitizeUrl } from '@/lib/sanitizeUrl';
@@ -41,8 +42,11 @@ import { sanitizeUrl } from '@/lib/sanitizeUrl';
 
 function useObservations(topic: string) {
   const { nostr } = useNostr();
+  const { config } = useAppContext();
+  // Re-read when the user edits their relay list (relay settings page).
+  const poolKey = config.relayMetadata.relays.map((r) => `${r.url}:${r.read ? 'r' : ''}`).join(',');
   return useQuery({
-    queryKey: ['sip01-explorer', topic],
+    queryKey: ['sip01-explorer', topic, poolKey],
     queryFn: async (c) => {
       // Read the union of the known crawler publish pools + NIP-50 search
       // relays (kind 39697 lives on any relay), plus the user's own pool.

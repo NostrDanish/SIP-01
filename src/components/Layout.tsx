@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { Moon, Sun, Code2, Menu, X } from 'lucide-react';
+import { Moon, Sun, Code2, Menu, Settings, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { useTheme } from '@/hooks/useTheme';
@@ -70,6 +70,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Code2 className="size-4" />
               </a>
             </Button>
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/settings" aria-label="Relay settings">
+                <Settings className="size-4" />
+              </Link>
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -136,6 +141,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <li><Link className="hover:text-primary transition-colors" to="/registry">Tag registry</Link></li>
               <li><Link className="hover:text-primary transition-colors" to="/query">Query reference</Link></li>
               <li><Link className="hover:text-primary transition-colors" to="/audit">Audit report</Link></li>
+              <li><Link className="hover:text-primary transition-colors" to="/settings">Relay settings</Link></li>
               <li><a className="hover:text-primary transition-colors" href="/spec/SIP-01.md" target="_blank" rel="noreferrer">Raw markdown</a></li>
             </ul>
           </div>

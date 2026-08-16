@@ -188,7 +188,13 @@ function RelayCoverageCard({ coverage, loading }: { coverage: RelayCoverage[]; l
                     title={r.status === 'ok' ? 'answered' : r.status === 'partial' ? 'answered, hit read timeout' : 'unreachable'}
                   />
                   <span className="font-mono text-xs truncate min-w-0 flex-1" title={r.isPool ? undefined : r.url}>
-                    {r.isPool ? r.url : relayHost(r.url)}
+                    {r.isPool ? (
+                      <Link to="/settings" className="hover:text-primary underline decoration-dotted underline-offset-2 transition-colors" title="Edit your relay list">
+                        {r.url}
+                      </Link>
+                    ) : (
+                      relayHost(r.url)
+                    )}
                   </span>
                   <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
                     {r.status === 'failed' ? (
@@ -583,8 +589,10 @@ export default function DashboardPage() {
           </Callout>
           <Callout kind="info" title="Where the numbers come from">
             Read live in your browser from {OBSERVATION_RELAYS.length} relays — the union of the Crawlstr and
-            indexstr publish pools and the NIP-50 search relays — plus your configured relays. See the coverage
-            panel above for per-relay detail. Auto-refreshes every 60s. Browse individual observations in the{' '}
+            indexstr publish pools and the NIP-50 search relays — plus your configured relays, which you can
+            change anytime in <Link to="/settings" className="text-primary hover:underline">relay settings</Link>.
+            See the coverage panel above for per-relay detail. Auto-refreshes every 60s. Browse individual
+            observations in the{' '}
             <Link to="/explorer" className="text-primary hover:underline">explorer</Link>.
           </Callout>
         </div>

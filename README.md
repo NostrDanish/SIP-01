@@ -72,6 +72,7 @@ Every hash in this README is real and reproducible — see
 | Site `/query` | Query reference: NIP-01 filters, NIP-50 operators, NIP-11, NIP-77 |
 | Site `/audit` | Cross-implementation fact-check & bug report (v1 → v1.1) |
 | Site `/explorer` | Live kind 39697 explorer + client-side validator + d-tag calculator |
+| Site `/settings` | Relay settings — the visitor's NIP-65 relay list, merged on top of the ecosystem read set |
 
 ## Modular by design
 

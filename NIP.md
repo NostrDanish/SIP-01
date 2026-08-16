@@ -45,6 +45,9 @@ All events carry an `alt` tag with a human-readable description
 - **/audit** — the cross-implementation fact-check / bug-check report.
 - **/explorer** — live kind 39697 explorer with a client-side validator and a
   URL → `d`-tag calculator implementing SIP-01 §7/§8 byte-compatibly.
+- **/settings** — relay settings: the visitor's own NIP-65 relay list (stored
+  locally, published as kind 10002 when logged in), merged on top of the
+  always-on ecosystem read set.
 
 The dashboard and explorer read from the union of the known crawler publish
 pools (Crawlstr + indexstr), the NIP-50 search relays, and the user's own

@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import type { NostrEvent } from '@nostrify/nostrify';
 
+import { useAppContext } from '@/hooks/useAppContext';
 import { SIP01 } from '@/lib/sip01';
 import { OBSERVATION_RELAYS } from '@/lib/sip01';
 import { parseSip01Event, validateSip01Event, type Sip01Observation } from '@/lib/sip01-utils';
@@ -159,9 +160,12 @@ export interface IndexStats {
 
 export function useIndexStats() {
   const { nostr } = useNostr();
+  const { config } = useAppContext();
+  // Re-read when the user edits their relay list (relay settings page).
+  const poolKey = config.relayMetadata.relays.map((r) => `${r.url}:${r.read ? 'r' : ''}`).join(',');
 
   const query = useQuery({
-    queryKey: ['sip01-index-stats-v1'],
+    queryKey: ['sip01-index-stats-v1', poolKey],
     queryFn: async (c) => {
       /* Fan out per relay so we can report exactly where the data lives.
          NRelay1 auto-closes idle connections (30s), so per-run handles are

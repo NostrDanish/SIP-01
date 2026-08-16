@@ -9,8 +9,10 @@ export const APP_RELAYS: RelayMetadata = {
   relays: [
     { url: 'wss://relay.ditto.pub/', read: true, write: true },
     { url: 'wss://relay.dreamith.to/', read: true, write: true },
-    { url: 'wss://relay.primal.net/', read: false, write: true },
-    { url: 'wss://nos.lol/', read: false, write: true },
+    // This site is read-heavy (dashboard + explorer): primal and nos.lol are
+    // also crawler publish targets, so they default to readable here.
+    { url: 'wss://relay.primal.net/', read: true, write: true },
+    { url: 'wss://nos.lol/', read: true, write: true },
   ],
   updatedAt: 0,
 };
